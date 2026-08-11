@@ -5,9 +5,9 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from 'rehype-stringify'
 import { unified } from 'unified';
-import {findAndReplace} from 'mdast-util-find-and-replace'
 import { visit } from 'unist-util-visit';
 import { getSlug } from './util.js'
+import { wikilinkPlugin } from './plugins/wikilinks.js'
 
 async function getMarkdownFiles (directory: string): Promise<string[]> {
     let markdownFiles: string[] = [];
@@ -35,37 +35,42 @@ type Page = {
 
 async function parseFiles() {
   const markdownFiles = await getMarkdownFiles("./content");
-  const slugs = markdownFiles.map(file => {
-      return getSlug(file);
-  });
-  const processor = unified()
-      .use(remarkParse)
-      .use(wikilinkPlugin, slugs)
-      .use(remarkRehype)
-      .use(rehypeStringify);
-    const linkExtractor = unified()
-        .use(remarkParse)
-        .use(wikilinkPlugin, slugs);
+  const slugsMap: Record<string, string[]> = Object.fromEntries(
+      markdownFiles.map((file) => [getSlug(file), [getSlug(file)]])
+  );
     const parsedData: Page[] = [];
 
 
   console.log("markdownFiles:", markdownFiles);
   const forwardLinks: Record<string, string[]> = {};
+  
+  const slugMap: Record<string, string[]> = {};
+  for (const file of markdownFiles) {
+    const slug = getSlug(file);
+    if (!slugMap[slug]) {
+      slugMap[slug] = [];
+    }
+    slugMap[slug].push(file);
+  }
 
   for (const file of markdownFiles) {
     const fileContent = fs.readFileSync(file, "utf-8");
     const matterData = matter(fileContent);
+    const linkExtractor = unified()
+        .use(remarkParse)
+        .use(wikilinkPlugin, slugMap, file);
+
     const linkTree = linkExtractor.parse(matterData.content);
     const transformedLinkTree = await linkExtractor.run(linkTree);
+    const sourceSlug = getSlug(file);
     visit(transformedLinkTree, 'link', (node: any) => {
       console.log("found link node", node);
-      const sourceSlug = getSlug(file);
-        const targetSlug = node.url.replace(/^\//, "").replace(/\.html$/, "");
-        if (!forwardLinks[sourceSlug]) {
-          forwardLinks[sourceSlug] = [];
-        }
-        forwardLinks[sourceSlug].push(targetSlug);
-      });
+      const targetSlug = getSlug(node.url.replace(/\.html$/, ".md"));
+      if (!forwardLinks[sourceSlug]) {
+        forwardLinks[sourceSlug] = [];
+      }
+      forwardLinks[sourceSlug].push(targetSlug);
+    });
   }
 
   const backlinks: Record<string, string[]> = {};
@@ -83,6 +88,13 @@ async function parseFiles() {
   for (const file of markdownFiles) {
     const fileContent = fs.readFileSync(file, "utf-8");
     const matterData = matter(fileContent);
+
+    const processor = unified()
+      .use(remarkParse)
+      .use(wikilinkPlugin, slugMap, file)
+      .use(remarkRehype)
+      .use(rehypeStringify);
+
     const processedContent = await processor.process(matterData.content);
     const slug = getSlug(file);
       parsedData.push({
@@ -95,31 +107,6 @@ async function parseFiles() {
 
   return parsedData;
 }
-
-function wikilinkPlugin(slugs: string[]) {
-  return (tree: any): void => {
-    findAndReplace(tree, [
-      /\[{2}(.+?)\]{2}/g,
-      (value: string, capturedText: string) => {
-        const slug = capturedText.toLowerCase().replace(/\s+/g, '-');
-        const slugsExists = slugs.includes(slug);
-        if (slugsExists) {
-          return {
-            type: 'link',
-            url: `/${slug}.html`,
-            children: [{ type: 'text', value: capturedText }],
-          };
-        } else {
-          return {
-            type: 'text',
-            value: capturedText,
-          };
-        }
-      },
-    ]);
-  };
-}
-
 
 const template = fs.readFileSync("./templates/page.html", "utf-8");
 

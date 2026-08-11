@@ -7,7 +7,7 @@ import rehypeStringify from 'rehype-stringify'
 import { unified } from 'unified';
 import {findAndReplace} from 'mdast-util-find-and-replace'
 import { visit } from 'unist-util-visit';
-
+import { getSlug } from './util.js'
 
 async function getMarkdownFiles (directory: string): Promise<string[]> {
     let markdownFiles: string[] = [];
@@ -36,9 +36,7 @@ type Page = {
 async function parseFiles() {
   const markdownFiles = await getMarkdownFiles("./content");
   const slugs = markdownFiles.map(file => {
-      const relativePath = path.relative("./content", file);
-      const slug = relativePath.replace(/\.md$/, "").replace(/\\/g, "/");
-      return slug;
+      return getSlug(file);
   });
   const processor = unified()
       .use(remarkParse)
@@ -61,8 +59,8 @@ async function parseFiles() {
     const transformedLinkTree = await linkExtractor.run(linkTree);
     visit(transformedLinkTree, 'link', (node: any) => {
       console.log("found link node", node);
-      const sourceSlug = path.relative("./content", file).replace(/\.md$/, "").replace(/\\/g, "/");
-        const targetSlug = node.url.replace(/^\//, "");
+      const sourceSlug = getSlug(file);
+        const targetSlug = node.url.replace(/^\//, "").replace(/\.html$/, "");
         if (!forwardLinks[sourceSlug]) {
           forwardLinks[sourceSlug] = [];
         }
@@ -86,7 +84,7 @@ async function parseFiles() {
     const fileContent = fs.readFileSync(file, "utf-8");
     const matterData = matter(fileContent);
     const processedContent = await processor.process(matterData.content);
-    const slug = path.relative("./content", file).replace(/\.md$/, "").replace(/\\/g, "/");
+    const slug = getSlug(file);
       parsedData.push({
       path: file,
       frontmatter: matterData.data,
@@ -121,6 +119,7 @@ function wikilinkPlugin(slugs: string[]) {
     ]);
   };
 }
+
 
 const template = fs.readFileSync("./templates/page.html", "utf-8");
 

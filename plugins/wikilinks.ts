@@ -6,7 +6,7 @@ export function wikilinkPlugin(slugsMap: Record<string, string[]>, currentFile: 
     findAndReplace(tree, [
       /\[{2}(.+?)\]{2}/g,
       (value: string, capturedText: string) => {
-        const slug = capturedText.toLowerCase().replace(/\s+/g, '-');
+        const slug = capturedText.toLowerCase().replace(/[\s_]+/g, '-');
         const resolved = resolveWikilink(currentFile, slug, slugsMap);
         if (resolved) {
           const relativePath = path.relative("./content", resolved).replace(/\.md$/, ".html").replace(/\\/g, "/");

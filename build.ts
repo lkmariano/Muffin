@@ -8,6 +8,7 @@ import { unified } from 'unified';
 import {findAndReplace} from 'mdast-util-find-and-replace'
 import { visit } from 'unist-util-visit';
 
+
 async function getMarkdownFiles (directory: string): Promise<string[]> {
     let markdownFiles: string[] = [];
     const contentDirectory = fs.readdirSync(directory, { withFileTypes: true });
@@ -107,7 +108,7 @@ function wikilinkPlugin(slugs: string[]) {
         if (slugsExists) {
           return {
             type: 'link',
-            url: `/${slug}`,
+            url: `/${slug}.html`,
             children: [{ type: 'text', value: capturedText }],
           };
         } else {
@@ -121,11 +122,43 @@ function wikilinkPlugin(slugs: string[]) {
   };
 }
 
+const template = fs.readFileSync("./templates/page.html", "utf-8");
+
+function render(page: Page, template: string): string {  
+  return template
+  .replaceAll("{{TITLE}}", page.frontmatter.title as string || "Untitled")
+  .replaceAll("{{CONTENT}}", page.content)
+  .replaceAll("{{BACKLINKS}}", (page.backlinks ?? []).map((link) => `<a href="/${link}.html">${link}</a>`).join(""))
+}
+
+function writeOutput(parsedData: Page[], template: string) {
+  for (const page of parsedData) {
+    const renderedContent = render(page, template);
+    const relativePath = path.relative("./content", page.path);
+    const outputPath = path.join("./muffin", relativePath.replace(/\.md$/, ".html"));
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, renderedContent, "utf-8");
+  }
+}
+
 console.log("Parsing markdown files...");
 parseFiles()
     .then((parsedData) => {
         console.log("Parsed data:", parsedData);
+        const template = fs.readFileSync("./templates/page.html", "utf-8");
+        writeOutput(parsedData, template);
+    if (parsedData.length === 0) {
+      console.log("No pages found to render.");
+      return;
+    }
+    const firstPage = parsedData[0];
+    if (!firstPage) {
+      console.log("No pages found to render.");
+      return;
+    }
+    const rendered = render(firstPage, template);
+    console.log(rendered);
     })
     .catch((error) => {
         console.error("Error parsing files:", error);
-    }); 
+    });

@@ -8,7 +8,6 @@ import { getTitle, getSlug } from "./util.js";
 import { unified } from 'unified';
 import { visit } from 'unist-util-visit';
 import { wikilinkPlugin } from './plugins/wikilinks.js'
-import { title } from "process";
 
 async function getMarkdownFiles (directory: string): Promise<string[]> {
     let markdownFiles: string[] = [];
@@ -32,20 +31,16 @@ type Page = {
     title: string;
     frontmatter: Record<string, unknown>;
     content: string;
-    backlinks?: string[];
+    backlinks?: Array<{ title: string; href: string }>;
 };
 
 async function parseFiles() {
   const markdownFiles = await getMarkdownFiles("./content");
-  const slugsMap: Record<string, string[]> = Object.fromEntries(
-      markdownFiles.map((file) => [getSlug(file), [getSlug(file)]])
-  );
-    const parsedData: Page[] = [];
-
+  const parsedData: Page[] = [];
 
   console.log("markdownFiles:", markdownFiles);
   const forwardLinks: Record<string, string[]> = {};
-  
+
   const slugMap: Record<string, string[]> = {};
   for (const file of markdownFiles) {
     const slug = getSlug(file);
@@ -87,9 +82,8 @@ async function parseFiles() {
     }
   }
 
-    
   console.log("backlinks", backlinks);
-    
+
   for (const file of markdownFiles) {
     const fileContent = fs.readFileSync(file, "utf-8");
     const matterData = matter(fileContent);
@@ -102,24 +96,27 @@ async function parseFiles() {
 
     const processedContent = await processor.process(matterData.content);
     const slug = getSlug(file);
-      parsedData.push({
+    parsedData.push({
       path: file,
       title: getTitle(file),
       frontmatter: matterData.data,
       content: String(processedContent),
-      backlinks: backlinks[slug] || [],
+      backlinks: (backlinks[slug] ?? [])
+        .map((sourceSlug) => slugMap[sourceSlug]?.[0])
+        .filter((filePath): filePath is string => typeof filePath === "string")
+        .map((filePath) => ({
+          title: getTitle(filePath),
+          href: `/${path.relative("./content", filePath).replace(/\.md$/, ".html").replace(/\\/g, "/")}`,
+        })),
     });
   }
 
   return parsedData;
-
 }
-
-const template = fs.readFileSync("./templates/page.html", "utf-8");
 
 function render(page: Page, template: string, nav: Record<string, { title: string; href: string }[]>): string {
   const listItems = (page.backlinks ?? [])
-    .map((link) => `<li><a href="/${link}.html">${link}</a></li>`)
+    .map((link) => `<li><a href="${link.href}">${link.title}</a></li>`)
     .join("");
   const backlinksHtml = listItems ? `<ul>${listItems}</ul>` : "";
   const navHtml = renderNav(nav);
@@ -131,7 +128,7 @@ function render(page: Page, template: string, nav: Record<string, { title: strin
     .replaceAll("{{NAV}}", navHtml);
 }
 
-function buildNav(pages: Page[]): Record<string, { title: string; href: string }[]>{
+function buildNav(pages: Page[]): Record<string, { title: string; href: string }[]> {
   const grouped: Record<string, { title: string; href: string }[]> = {};
   for (const page of pages) {
     const relativePath = path.relative("./content", page.path);
@@ -162,8 +159,6 @@ function writeOutput(parsedData: Page[], template: string, nav: Record<string, {
     fs.writeFileSync(outputPath, renderedContent, "utf-8");
   }
 }
-
-
 
 function renderNav(nav: Record<string, { title: string; href: string }[]>): string {
   let navHtml = '<ul>';
@@ -196,8 +191,6 @@ parseFiles()
         const template = fs.readFileSync("./templates/page.html", "utf-8");
         const nav = buildNav(parsedData);
         writeOutput(parsedData, template, nav);
-        const navHtml = renderNav(nav);
-        console.log("Navigation:", navHtml);
     })
     .catch((error) => {
         console.error("Build failed:", error);

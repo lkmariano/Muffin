@@ -1,13 +1,14 @@
 import fs from "fs";
-import path from "path";
+import path, { join } from "path";
 import  matter from "gray-matter";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from 'rehype-stringify'
+import { getTitle, getSlug } from "./util.js";
 import { unified } from 'unified';
 import { visit } from 'unist-util-visit';
-import { getSlug } from './util.js'
 import { wikilinkPlugin } from './plugins/wikilinks.js'
+import { title } from "process";
 
 async function getMarkdownFiles (directory: string): Promise<string[]> {
     let markdownFiles: string[] = [];
@@ -28,6 +29,7 @@ async function getMarkdownFiles (directory: string): Promise<string[]> {
 
 type Page = {
     path: string;
+    title: string;
     frontmatter: Record<string, unknown>;
     content: string;
     backlinks?: string[];
@@ -79,9 +81,12 @@ async function parseFiles() {
       if (!backlinks[target]) {
         backlinks[target] = [];
       }
-      backlinks[target].push(source);
+      if (!backlinks[target].includes(source)) {
+        backlinks[target].push(source);
+      }
     }
   }
+
     
   console.log("backlinks", backlinks);
     
@@ -99,6 +104,7 @@ async function parseFiles() {
     const slug = getSlug(file);
       parsedData.push({
       path: file,
+      title: getTitle(file),
       frontmatter: matterData.data,
       content: String(processedContent),
       backlinks: backlinks[slug] || [],
@@ -106,15 +112,23 @@ async function parseFiles() {
   }
 
   return parsedData;
+
 }
 
 const template = fs.readFileSync("./templates/page.html", "utf-8");
 
-function render(page: Page, template: string): string {  
+function render(page: Page, template: string, nav: Record<string, { title: string; href: string }[]>): string {
+  const listItems = (page.backlinks ?? [])
+    .map((link) => `<li><a href="/${link}.html">${link}</a></li>`)
+    .join("");
+  const backlinksHtml = listItems ? `<ul>${listItems}</ul>` : "";
+  const navHtml = renderNav(nav);
+
   return template
-  .replaceAll("{{TITLE}}", page.frontmatter.title as string || "Untitled")
-  .replaceAll("{{CONTENT}}", page.content)
-  .replaceAll("{{BACKLINKS}}", (page.backlinks ?? []).map((link) => `<a href="/${link}.html">${link}</a>`).join(""))
+    .replaceAll("{{TITLE}}", page.title)
+    .replaceAll("{{CONTENT}}", page.content)
+    .replaceAll("{{BACKLINKS}}", backlinksHtml)
+    .replaceAll("{{NAV}}", navHtml);
 }
 
 function writeOutput(parsedData: Page[], template: string) {
@@ -127,24 +141,64 @@ function writeOutput(parsedData: Page[], template: string) {
   }
 }
 
+
+function buildNav(pages: Page[]): Record<string, { title: string; href: string }[]>{
+  const grouped: Record<string, { title: string; href: string }[]> = {};
+  for (const page of pages) {
+    const relativePath = path.relative("./content", page.path);
+    const href = `/${relativePath.replace(/\.md$/, ".html")}`;
+    const title = page.title;
+    const dir = path.dirname(relativePath);
+    if (!grouped[dir]) {
+      grouped[dir] = [];
+    }
+    grouped[dir].push({ title, href });
+  }
+
+  for (const folder in grouped) {
+    const folderPages = grouped[folder];
+    if (!folderPages) continue;
+    folderPages.sort((a, b) => a.title.localeCompare(b.title));
+  }
+
+  return grouped;
+}
+
+function renderNav(nav: Record<string, { title: string; href: string }[]>): string {
+  let navHtml = '<ul>';
+  for (const folder in nav) {
+    const folderPages = nav[folder];
+    if (!folderPages) continue;
+
+    const items = folderPages
+      .map((page) => `<li><a href="${page.href}">${page.title}</a></li>`)
+      .join('');
+
+    if (folder === '.') {
+      navHtml += items;
+    } else {
+      navHtml += `<li>${folder}<ul>${items}</ul></li>`;
+    }
+  }
+  navHtml += '</ul>';
+  return navHtml;
+}
+
 console.log("Parsing markdown files...");
 parseFiles()
     .then((parsedData) => {
         console.log("Parsed data:", parsedData);
+        if (parsedData.length === 0) {
+          console.log("No pages found to render.");
+          return;
+        }
         const template = fs.readFileSync("./templates/page.html", "utf-8");
         writeOutput(parsedData, template);
-    if (parsedData.length === 0) {
-      console.log("No pages found to render.");
-      return;
-    }
-    const firstPage = parsedData[0];
-    if (!firstPage) {
-      console.log("No pages found to render.");
-      return;
-    }
-    const rendered = render(firstPage, template);
-    console.log(rendered);
+        const nav = buildNav(parsedData);
+        const navHtml = renderNav(nav);
+        console.log("Navigation:", navHtml);
     })
     .catch((error) => {
-        console.error("Error parsing files:", error);
+        console.error("Build failed:", error);
+        process.exit(1);
     });

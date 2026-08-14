@@ -1,24 +1,29 @@
 import {findAndReplace} from 'mdast-util-find-and-replace'
 import path from 'path';
+import { getTitle } from '../util.js';
 
 export function wikilinkPlugin(slugsMap: Record<string, string[]>, currentFile: string): (tree: any) => void {
   return (tree: any): void => {
     findAndReplace(tree, [
       /\[{2}(.+?)\]{2}/g,
       (value: string, capturedText: string) => {
-        const slug = capturedText.toLowerCase().replace(/[\s_]+/g, '-');
+        const [rawTargetPart, rawDisplay] = capturedText.split('|');
+        const rawTarget: string = rawTargetPart ?? capturedText;
+        const slug = rawTarget.toLowerCase().replace(/[\s_]+/g, '-');
         const resolved = resolveWikilink(currentFile, slug, slugsMap);
+        const displayText: string = rawDisplay ?? (resolved ? getTitle(resolved) : rawTarget);
+
         if (resolved) {
           const relativePath = path.relative("./content", resolved).replace(/\.md$/, ".html").replace(/\\/g, "/");
           return {
             type: 'link',
             url: `/${relativePath}`,
-            children: [{ type: 'text', value: capturedText }],
+            children: [{ type: 'text', value: displayText }],
           };
         } else {
           return {
             type: 'text',
-            value: capturedText,
+            value: displayText,
           };
         }
       },

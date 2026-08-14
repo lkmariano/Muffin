@@ -3,12 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <title>{{TITLE}}</title>
+    <style>
+      body { display: flex; margin: 0; font-family: sans-serif; }
+      nav { width: 200px; padding: 1rem; border-right: 1px solid #ccc; }
+      main { flex: 1; padding: 1rem; }
+      aside { width: 200px; padding: 1rem; border-left: 1px solid #ccc; }
+    </style>
   </head>
   <body>
+    <nav>{{NAV}}</nav>
     <main>
       <h1>{{TITLE}}</h1>
       {{CONTENT}}
-      {{BACKLINKS}}
     </main>
+    <aside>{{BACKLINKS}}</aside>
   </body>
 </html>

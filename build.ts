@@ -131,17 +131,6 @@ function render(page: Page, template: string, nav: Record<string, { title: strin
     .replaceAll("{{NAV}}", navHtml);
 }
 
-function writeOutput(parsedData: Page[], template: string) {
-  for (const page of parsedData) {
-    const renderedContent = render(page, template);
-    const relativePath = path.relative("./content", page.path);
-    const outputPath = path.join("./muffin", relativePath.replace(/\.md$/, ".html"));
-    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(outputPath, renderedContent, "utf-8");
-  }
-}
-
-
 function buildNav(pages: Page[]): Record<string, { title: string; href: string }[]>{
   const grouped: Record<string, { title: string; href: string }[]> = {};
   for (const page of pages) {
@@ -163,6 +152,18 @@ function buildNav(pages: Page[]): Record<string, { title: string; href: string }
 
   return grouped;
 }
+
+function writeOutput(parsedData: Page[], template: string, nav: Record<string, { title: string; href: string }[]>) {
+  for (const page of parsedData) {
+    const renderedContent = render(page, template, nav);
+    const relativePath = path.relative("./content", page.path);
+    const outputPath = path.join("./muffin", relativePath.replace(/\.md$/, ".html"));
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, renderedContent, "utf-8");
+  }
+}
+
+
 
 function renderNav(nav: Record<string, { title: string; href: string }[]>): string {
   let navHtml = '<ul>';
@@ -193,8 +194,8 @@ parseFiles()
           return;
         }
         const template = fs.readFileSync("./templates/page.html", "utf-8");
-        writeOutput(parsedData, template);
         const nav = buildNav(parsedData);
+        writeOutput(parsedData, template, nav);
         const navHtml = renderNav(nav);
         console.log("Navigation:", navHtml);
     })

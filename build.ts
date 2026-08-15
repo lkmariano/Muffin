@@ -64,8 +64,6 @@ async function parseFiles() {
       if (!node.data || !node.data.isWikilink) {
         return;
       }
-
-      console.log("found link node", node);
       const targetSlug = getSlug(node.url.replace(/\.html$/, ".md"));
       if (!forwardLinks[sourceSlug]) {
         forwardLinks[sourceSlug] = [];

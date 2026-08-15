@@ -61,6 +61,10 @@ async function parseFiles() {
     const transformedLinkTree = await linkExtractor.run(linkTree);
     const sourceSlug = getSlug(file);
     visit(transformedLinkTree, 'link', (node: any) => {
+      if (!node.data || !node.data.isWikilink) {
+        return;
+      }
+
       console.log("found link node", node);
       const targetSlug = getSlug(node.url.replace(/\.html$/, ".md"));
       if (!forwardLinks[sourceSlug]) {

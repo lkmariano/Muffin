@@ -1,4 +1,4 @@
-import {findAndReplace} from 'mdast-util-find-and-replace'
+import { findAndReplace } from 'mdast-util-find-and-replace'
 import path from 'path';
 import { getTitle } from '../util.js';
 
@@ -19,12 +19,13 @@ export function wikilinkPlugin(slugsMap: Record<string, string[]>, currentFile: 
             type: 'link',
             url: `/${relativePath}`,
             children: [{ type: 'text', value: displayText }],
-          };
+            data: { isWikilink: true } as any,
+          } as any;
         } else {
           return {
             type: 'text',
             value: displayText,
-          };
+          } as any;
         }
       },
     ]);

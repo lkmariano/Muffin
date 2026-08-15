@@ -1,6 +1,7 @@
 import { findAndReplace } from 'mdast-util-find-and-replace'
 import path from 'path';
 import { getTitle } from '../util.js';
+import { withBasePath } from '../basePath.js';
 
 export function wikilinkPlugin(slugsMap: Record<string, string[]>, currentFile: string): (tree: any) => void {
   return (tree: any): void => {
@@ -17,7 +18,7 @@ export function wikilinkPlugin(slugsMap: Record<string, string[]>, currentFile: 
           const relativePath = path.relative("./content", resolved).replace(/\.md$/, ".html").replace(/\\/g, "/");
           return {
             type: 'link',
-            url: `/${relativePath}`,
+            url: withBasePath(`/${relativePath}`),
             children: [{ type: 'text', value: displayText }],
             data: { isWikilink: true } as any,
           } as any;

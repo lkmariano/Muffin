@@ -8,6 +8,7 @@ import { getTitle, getSlug } from "./util.js";
 import { unified } from 'unified';
 import { visit } from 'unist-util-visit';
 import { wikilinkPlugin } from './plugins/wikilinks.js'
+import { withBasePath } from './basePath.js'
 
 async function getMarkdownFiles (directory: string): Promise<string[]> {
     let markdownFiles: string[] = [];
@@ -108,7 +109,7 @@ async function parseFiles() {
         .filter((filePath): filePath is string => typeof filePath === "string")
         .map((filePath) => ({
           title: getTitle(filePath),
-          href: `/${path.relative("./content", filePath).replace(/\.md$/, ".html").replace(/\\/g, "/")}`,
+          href: withBasePath(`/${path.relative("./content", filePath).replace(/\.md$/, ".html").replace(/\\/g, "/")}`),
         })),
     });
   }
@@ -122,19 +123,21 @@ function render(page: Page, template: string, nav: Record<string, { title: strin
     .join("");
   const backlinksHtml = listItems ? `<ul>${listItems}</ul>` : "";
   const navHtml = renderNav(nav);
+  const cssHref = withBasePath("/styles.css");
 
   return template
     .replaceAll("{{TITLE}}", page.title)
     .replaceAll("{{CONTENT}}", page.content)
     .replaceAll("{{BACKLINKS}}", backlinksHtml)
-    .replaceAll("{{NAV}}", navHtml);
+    .replaceAll("{{NAV}}", navHtml)
+    .replaceAll("{{CSS}}", cssHref);
 }
 
 function buildNav(pages: Page[]): Record<string, { title: string; href: string }[]> {
   const grouped: Record<string, { title: string; href: string }[]> = {};
   for (const page of pages) {
     const relativePath = path.relative("./content", page.path);
-    const href = `/${relativePath.replace(/\.md$/, ".html")}`;
+    const href = withBasePath(`/${relativePath.replace(/\.md$/, ".html")}`);
     const title = page.title;
     const dir = path.dirname(relativePath);
     if (!grouped[dir]) {
@@ -193,6 +196,7 @@ parseFiles()
         const template = fs.readFileSync("./templates/page.html", "utf-8");
         const nav = buildNav(parsedData);
         writeOutput(parsedData, template, nav);
+        fs.copyFileSync("./templates/styles.css", "./muffin/styles.css");
     })
     .catch((error) => {
         console.error("Build failed:", error);

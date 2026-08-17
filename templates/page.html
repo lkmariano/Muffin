@@ -1,16 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">      
-  <link rel="stylesheet" href="{{CSS}}">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <title>{{TITLE}}</title>
+    <link rel="stylesheet" href="{{CSS}}">
   </head>
   <body>
-    <nav>{{NAV}}</nav>
-    <main>
-      <h1>{{TITLE}}</h1>
-      {{CONTENT}}
-    </main>
-    <aside>{{BACKLINKS}}</aside>
+    <div class="page">
+      <nav>
+        <div class="nav-links">{{NAV}}</div>
+        <footer>Baked with <a href="https://github.com/lkmariano/Muffin" target="_blank" rel="noopener noreferrer">Muffin</a> by lkmariano</footer>
+      </nav>
+      <main>
+        <div class="content">
+          <h1>{{TITLE}}</h1>
+            {{CONTENT}}
+        </div>
+      </main>
+      <aside>
+        {{BACKLINKS}}
+      </aside>
+    </div>
+    <footer>Baked with <a href="https://github.com/lkmariano/Muffin" target="_blank" rel="noopener noreferrer">Muffin</a> by lkmariano</footer>
   </body>
 </html>

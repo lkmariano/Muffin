@@ -121,16 +121,16 @@ function render(page: Page, template: string, nav: Record<string, { title: strin
   const listItems = (page.backlinks ?? [])
     .map((link) => `<li><a href="${link.href}">${link.title}</a></li>`)
     .join("");
-  const backlinksHtml = listItems ? `<ul>${listItems}</ul>` : "";
+  const backlinksHtml = listItems ? `<ul>Backlinks${listItems}</ul>` : "";
   const navHtml = renderNav(nav);
   const cssHref = withBasePath("/styles.css");
 
   return template
     .replaceAll("{{TITLE}}", page.title)
-    .replaceAll("{{CONTENT}}", page.content)
     .replaceAll("{{BACKLINKS}}", backlinksHtml)
     .replaceAll("{{NAV}}", navHtml)
-    .replaceAll("{{CSS}}", cssHref);
+    .replaceAll("{{CSS}}", cssHref)
+    .replaceAll("{{CONTENT}}", page.content);   
 }
 
 function buildNav(pages: Page[]): Record<string, { title: string; href: string }[]> {
@@ -178,7 +178,7 @@ function renderNav(nav: Record<string, { title: string; href: string }[]>): stri
     if (folder === '.') {
       navHtml += items;
     } else {
-      navHtml += `<li>${folder}<ul>${items}</ul></li>`;
+      navHtml += `<li><details><summary>${folder}</summary><ul>${items}</ul></details></li>`;
     }
   }
   navHtml += '</ul>';

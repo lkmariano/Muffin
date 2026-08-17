@@ -197,6 +197,7 @@ parseFiles()
         const nav = buildNav(parsedData);
         writeOutput(parsedData, template, nav);
         fs.copyFileSync("./templates/styles.css", "./muffin/styles.css");
+        fs.copyFileSync("./muffin/Muffin.html", "./muffin/index.html");
     })
     .catch((error) => {
         console.error("Build failed:", error);

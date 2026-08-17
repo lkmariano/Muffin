@@ -8,4 +8,4 @@ Remaining items on the Muffin roadmap.
 
 ## Nice to have, not blocking
 
-- [ ] Extract the duplicated `[\s_]+` normalization regex (currently in both `utils.ts` and `wikilinks.ts`) into a shared `normalizeSlug()` helper.
+- [ ] Extract the duplicated `[\s_]+` normalization regex (currently in both `utils.ts` and `wikilinks.ts`) into a shared `normalizeSlug()` helper

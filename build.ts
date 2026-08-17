@@ -121,7 +121,9 @@ function render(page: Page, template: string, nav: Record<string, { title: strin
   const listItems = (page.backlinks ?? [])
     .map((link) => `<li><a href="${link.href}">${link.title}</a></li>`)
     .join("");
-  const backlinksHtml = listItems ? `<ul>Backlinks${listItems}</ul>` : "";
+  const backlinksHtml = listItems
+    ? `<div class="aside-title">Backlinks</div><ul>${listItems}</ul>`
+    : "";
   const navHtml = renderNav(nav);
   const cssHref = withBasePath("/styles.css");
 

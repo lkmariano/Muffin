@@ -1,0 +1,14 @@
+1. Explorer 
+	- Recursive Explorer Sidebar Similar to [https://github.com/quartz-community/explorer](https://github.com/quartz-community/explorer)
+	- Nested `<details>`/`<summary>` 
+		- Each folder renders as `<details>` element
+			- each with a `<summary>`
+				- wrapping a a `<u>` of children
+					- all files are `<lia<a>`
+	- CSS Classes (rough sketch)
+		-  .explorer 
+			- outer container
+		- .explorer-content
+			- Scrollable inner wrapper
+		- Folder rows get a chevron icon that rotates with CSS transforms when `[open]`
+		- Indentation per depth level, usually with `padding-left` scaled by depth

@@ -37,17 +37,54 @@ nav {
   flex: 1;
   overflow-y: auto;
   padding-left: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.explorer-header {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 4px 0 12px 0;
+  flex-shrink: 0;
+}
+
+.explorer-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #EDE9E6;
+  text-transform: uppercase;
+}
+
+.explorer-header-chevron {
+  font-size: 14px;
+  color: #EDE9E6;
+  transition: transform 0.15s ease;
+}
+
+.explorer-header[aria-expanded="false"] .explorer-header-chevron {
+  transform: rotate(-90deg);
+}
+
+.explorer-content {
+  flex: 1;
+  overflow-y: auto;
 }
 
 .nav-links ul {
   list-style: none;
-  padding-left: 16px;
-  margin: 8px 0px;
+  padding-left: 14px;
+  margin: 2px 0px;
   text-align: left;
+  border-left: 1px solid rgba(237, 233, 230, 0.12);
 }
 
-.nav-links > ul {
+.nav-links > .explorer-content > ul {
   padding-left: 0px;
+  border-left: none;
 }
 
 .site-title {
@@ -60,32 +97,37 @@ nav {
   text-align: left;
 }
 
+nav li {
+  margin: 2px 0;
+}
+
 nav a {
   text-decoration: none;
-  color: #F7F1DE;
-  font-size: 18px;
-  font-weight: 600;
+  color: #cfc9c2;
+  font-size: 16px;
+  font-weight: 400;
   font-family: 'Lora', Georgia, serif;
 }
 
 nav a:hover {
+  color: #EDE9E6;
   text-decoration: underline;
 }
 
 nav details {
-  margin: 8px 0;
+  margin: 2px 0;
 }
 
 nav summary {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 17px;
-  font-weight: 600;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 700;
   font-family: 'Lora', Georgia, serif;
   cursor: pointer;
-  color: #F7F1DE;
-  padding: 6px 0;
+  color: #8fa8bf;
+  padding: 4px 0;
   list-style-position: outside;
 }
 
@@ -95,17 +137,17 @@ nav summary::-webkit-details-marker {
 }
 
 nav summary:hover {
-  color: #82c354;
+  color: #a9c2d8;
 }
 
 nav details ul {
-  margin: 8px 0 8px 16px;
+  margin: 2px 0 2px 6px;
 }
 
 .explorer-chevron {
   display: inline-block;
-  font-size: 0.7em;
-  color: #9a8873;
+  font-size: 0.65em;
+  color: #8fa8bf;
   transition: transform 0.15s ease;
 }
 

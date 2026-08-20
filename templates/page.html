@@ -9,7 +9,13 @@
     <div class="page">
       <nav>
         <div class="site-title">Muffin</div>
-        <div class="nav-links">{{NAV}}</div>
+        <div class="nav-links">
+          <button type="button" class="explorer-header" id="explorer-toggle-all" aria-expanded="true">
+            <span class="explorer-title">Explorer</span>
+            <span class="explorer-header-chevron">⌄</span>
+          </button>
+          <div class="explorer-content">{{NAV}}</div>
+        </div>
         <footer>Baked with <a href="https://github.com/lkmariano/Muffin" target="_blank" rel="noopener noreferrer">Muffin</a> by <a href="https://github.com/lkmariano" target="_blank" rel="noopener noreferrer">lkmariano</a></footer>
       </nav>
       <main>
@@ -24,5 +30,20 @@
         </div>
       </aside>
     </div>
+    <script>
+      (function () {
+        var toggle = document.getElementById('explorer-toggle-all');
+        if (!toggle) return;
+        toggle.addEventListener('click', function () {
+          var isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+          var nextState = !isExpanded;
+          var allDetails = document.querySelectorAll('.explorer-content details');
+          allDetails.forEach(function (d) {
+            d.open = nextState;
+          });
+          toggle.setAttribute('aria-expanded', String(nextState));
+        });
+      })();
+    </script>
   </body>
 </html>

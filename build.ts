@@ -1,6 +1,6 @@
 import fs from "fs";
-import path, { join } from "path";
-import  matter from "gray-matter";
+import path from "path";
+import matter from "gray-matter";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from 'rehype-stringify'
@@ -9,6 +9,7 @@ import { unified } from 'unified';
 import { visit } from 'unist-util-visit';
 import { wikilinkPlugin } from './plugins/wikilinks.js'
 import { withBasePath } from './basePath.js'
+import { buildExplorerTree, renderExplorer } from './plugins/explorer.js'
 
 async function getMarkdownFiles (directory: string): Promise<string[]> {
     let markdownFiles: string[] = [];
@@ -117,49 +118,9 @@ async function parseFiles() {
   return parsedData;
 }
 
-function render(page: Page, template: string, nav: Record<string, { title: string; href: string }[]>): string {
-  const listItems = (page.backlinks ?? [])
-    .map((link) => `<li><a href="${link.href}">${link.title}</a></li>`)
-    .join("");
-  const backlinksHtml = listItems
-    ? `<div class="aside-title">Backlinks</div><ul>${listItems}</ul>`
-    : "";
-  const navHtml = renderNav(nav);
-  const cssHref = withBasePath("/styles.css");
-
-  return template
-    .replaceAll("{{TITLE}}", page.title)
-    .replaceAll("{{BACKLINKS}}", backlinksHtml)
-    .replaceAll("{{NAV}}", navHtml)
-    .replaceAll("{{CSS}}", cssHref)
-    .replaceAll("{{CONTENT}}", page.content);   
-}
-
-function buildNav(pages: Page[]): Record<string, { title: string; href: string }[]> {
-  const grouped: Record<string, { title: string; href: string }[]> = {};
-  for (const page of pages) {
-    const relativePath = path.relative("./content", page.path);
-    const href = withBasePath(`/${relativePath.replace(/\.md$/, ".html")}`);
-    const title = page.title;
-    const dir = path.dirname(relativePath);
-    if (!grouped[dir]) {
-      grouped[dir] = [];
-    }
-    grouped[dir].push({ title, href });
-  }
-
-  for (const folder in grouped) {
-    const folderPages = grouped[folder];
-    if (!folderPages) continue;
-    folderPages.sort((a, b) => a.title.localeCompare(b.title));
-  }
-
-  return grouped;
-}
-
-function writeOutput(parsedData: Page[], template: string, nav: Record<string, { title: string; href: string }[]>) {
+function writeOutput(parsedData: Page[], template: string, explorerHtml: string) {
   for (const page of parsedData) {
-    const renderedContent = render(page, template, nav);
+    const renderedContent = render(page, template, explorerHtml);
     const relativePath = path.relative("./content", page.path);
     const outputPath = path.join("./muffin", relativePath.replace(/\.md$/, ".html"));
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
@@ -167,24 +128,21 @@ function writeOutput(parsedData: Page[], template: string, nav: Record<string, {
   }
 }
 
-function renderNav(nav: Record<string, { title: string; href: string }[]>): string {
-  let navHtml = '<ul>';
-  for (const folder in nav) {
-    const folderPages = nav[folder];
-    if (!folderPages) continue;
+function render(page: Page, template: string, explorerHtml: string): string {
+  const listItems = (page.backlinks ?? [])
+    .map((link) => `<li><a href="${link.href}">${link.title}</a></li>`)
+    .join("");
+  const backlinksHtml = listItems
+  ? `<div class="aside-title">Backlinks</div><ul>${listItems}</ul>`
+  : "";
+  const cssHref = withBasePath("/styles.css");
 
-    const items = folderPages
-      .map((page) => `<li><a href="${page.href}">${page.title}</a></li>`)
-      .join('');
-
-    if (folder === '.') {
-      navHtml += items;
-    } else {
-      navHtml += `<li><details><summary>${folder}</summary><ul>${items}</ul></details></li>`;
-    }
-  }
-  navHtml += '</ul>';
-  return navHtml;
+  return template
+    .replaceAll("{{TITLE}}", page.title)
+    .replaceAll("{{BACKLINKS}}", backlinksHtml)
+    .replaceAll("{{NAV}}", explorerHtml)
+    .replaceAll("{{CSS}}", cssHref)
+    .replaceAll("{{CONTENT}}", page.content);   
 }
 
 console.log("Parsing markdown files...");
@@ -196,10 +154,11 @@ parseFiles()
           return;
         }
         const template = fs.readFileSync("./templates/page.html", "utf-8");
-        const nav = buildNav(parsedData);
-        writeOutput(parsedData, template, nav);
+        const explorerTree = buildExplorerTree("./content");
+        const explorerHtml = renderExplorer(explorerTree);
+        writeOutput(parsedData, template, explorerHtml);
         fs.copyFileSync("./templates/styles.css", "./muffin/styles.css");
-        fs.copyFileSync("./muffin/Muffin.html", "./muffin/index.html");
+        fs.copyFileSync("./muffin/projects.html", "./muffin/index.html");
     })
     .catch((error) => {
         console.error("Build failed:", error);

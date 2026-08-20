@@ -77,6 +77,9 @@ nav details {
 }
 
 nav summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 17px;
   font-weight: 600;
   font-family: 'Lora', Georgia, serif;
@@ -86,12 +89,28 @@ nav summary {
   list-style-position: outside;
 }
 
+nav summary::marker,
+nav summary::-webkit-details-marker {
+  display: none;
+}
+
 nav summary:hover {
   color: #82c354;
 }
 
 nav details ul {
   margin: 8px 0 8px 16px;
+}
+
+.explorer-chevron {
+  display: inline-block;
+  font-size: 0.7em;
+  color: #9a8873;
+  transition: transform 0.15s ease;
+}
+
+nav details[open] > summary .explorer-chevron {
+  transform: rotate(90deg);
 }
 
 nav footer {
@@ -133,36 +152,45 @@ main h1 {
 aside {
   width: 400px;
   flex-shrink: 0;
-  padding: 32px 400px 0px 0px;
+  padding: 32px 200px 0px 24px;
   height: 100%;
-  overflow-y: auto;
+  position: sticky;
+  top: 0px;
   display: flex;
   flex-direction: column;
 }
 
-.aside-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #EDE9E6;
-  text-align: right;
-  padding: 0 0px 0px 12px;
+.backlinks-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 24px;
 }
 
-aside ul {
+.backlinks-list ul {
   list-style: none;
-  padding-right: 22px;
+  padding-right: 16px;
   margin: 8px 0px;
   text-align: right;
 }
 
-aside > ul {
-  padding-right: 8px;
+.backlinks-list > ul {
+  padding-right: 0px;
+}
+
+.aside-title {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #EDE9E6;
+  padding: 0 24px 16px 0;
+  flex-shrink: 0;
+  text-align: right;
 }
 
 aside a {
   text-decoration: none;
   color: #F7F1DE;
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 600;
   font-family: 'Lora', Georgia, serif;
 }
@@ -170,7 +198,6 @@ aside a {
 aside a:hover {
   text-decoration: underline;
 }
-
 a {
   color: #9a8873;
 }

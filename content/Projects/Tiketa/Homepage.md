@@ -1,0 +1,21 @@
+- KPI Cards
+	- Total Tickets Sold (Drill Down)
+	- Total Net Revenue (Drill Down | can be negative) 
+	- Total Expenses (Drill Down)
+	- Total Events Run (Drill Down)
+	- Avg tickets per event
+	- Avg net revenue per event
+	- Avg attendees per event
+	- Top-performing event (Highest Revenue event)
+- Graphs 
+	- Tickets/Revenue sold over time
+	- Pie Chart (Current Event Expenses)
+	- Pie Chart (Ticket type)
+		- Pre-Sale (Online)
+		- Walk-In
+		- Tropa Bundle
+	- Recent Events list
+		- When clicked goes to -> [[Events]]
+	- Upcoming Events Indicator
+		- Calendar
+

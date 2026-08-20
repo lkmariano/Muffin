@@ -1,0 +1,6 @@
+- Create Event
+	- Current Event
+		- Budget VS Actual Expense = Total Expenses
+		- Total Revenue 
+	- Previous Events
+		- Historical Data ^

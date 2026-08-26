@@ -10,6 +10,7 @@ import { visit } from 'unist-util-visit';
 import { wikilinkPlugin } from './plugins/wikilinks.js'
 import { withBasePath } from './basePath.js'
 import { buildExplorerTree, renderExplorer } from './plugins/explorer.js'
+import { loadThemeVars } from './plugins/theme.js'
 
 async function getMarkdownFiles (directory: string): Promise<string[]> {
     let markdownFiles: string[] = [];
@@ -136,11 +137,13 @@ function render(page: Page, template: string, explorerHtml: string): string {
   ? `<div class="aside-title">Backlinks</div><ul>${listItems}</ul>`
   : "";
   const cssHref = withBasePath("/styles.css");
+  const themeCssHref = withBasePath("/theme.css");
 
   return template
     .replaceAll("{{TITLE}}", page.title)
     .replaceAll("{{BACKLINKS}}", backlinksHtml)
     .replaceAll("{{NAV}}", explorerHtml)
+    .replaceAll("{{THEME_CSS}}", themeCssHref)
     .replaceAll("{{CSS}}", cssHref)
     .replaceAll("{{CONTENT}}", page.content);   
 }
@@ -158,6 +161,7 @@ parseFiles()
         const explorerHtml = renderExplorer(explorerTree);
         writeOutput(parsedData, template, explorerHtml);
         fs.copyFileSync("./templates/styles.css", "./muffin/styles.css");
+        fs.writeFileSync("./muffin/theme.css", loadThemeVars("./muffin.config.json"), "utf-8");
         fs.copyFileSync("./muffin/projects.html", "./muffin/index.html");
     })
     .catch((error) => {

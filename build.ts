@@ -29,11 +29,17 @@ async function getMarkdownFiles (directory: string): Promise<string[]> {
   return markdownFiles;
 }
 
+function formatDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
 type Page = {
     path: string;
     title: string;
     frontmatter: Record<string, unknown>;
     content: string;
+    status?: string;
+    updated: string;
     backlinks?: Array<{ title: string; href: string }>;
 };
 
@@ -101,11 +107,16 @@ async function parseFiles() {
 
     const processedContent = await processor.process(matterData.content);
     const slug = getSlug(file);
+    const mtime = fs.statSync(file).mtime;
+    const statusValue = matterData.data.status;
+
     parsedData.push({
       path: file,
       title: getTitle(file),
       frontmatter: matterData.data,
       content: String(processedContent),
+      ...(typeof statusValue === "string" ? { status: statusValue } : {}),
+      updated: formatDate(mtime),
       backlinks: (backlinks[slug] ?? [])
         .map((sourceSlug) => slugMap[sourceSlug]?.[0])
         .filter((filePath): filePath is string => typeof filePath === "string")
@@ -139,12 +150,20 @@ function render(page: Page, template: string, explorerHtml: string): string {
   const cssHref = withBasePath("/styles.css");
   const themeCssHref = withBasePath("/theme.css");
 
+  const metaParts: string[] = [];
+  if (page.status) {
+    metaParts.push(`<span class="page-status">${page.status}</span>`);
+  }
+  metaParts.push(`<span class="page-updated">Updated ${page.updated}</span>`);
+  const pageMetaHtml = `<div class="page-meta">${metaParts.join("")}</div>`;
+
   return template
     .replaceAll("{{TITLE}}", page.title)
     .replaceAll("{{BACKLINKS}}", backlinksHtml)
     .replaceAll("{{NAV}}", explorerHtml)
     .replaceAll("{{THEME_CSS}}", themeCssHref)
     .replaceAll("{{CSS}}", cssHref)
+    .replaceAll("{{PAGE_META}}", pageMetaHtml)
     .replaceAll("{{CONTENT}}", page.content);   
 }
 

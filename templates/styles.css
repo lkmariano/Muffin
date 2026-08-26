@@ -191,6 +191,19 @@ main h1 {
   margin-top: 0px;
 }
 
+.page-meta {
+  display: flex;
+  gap: var(--spacing-8);
+  font-size: var(--font-sizes-xs);
+  color: var(--colors-footer-text);
+  margin-bottom: var(--spacing-7);
+}
+
+.page-status {
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
 aside {
   width: var(--layout-aside-width);
   flex-shrink: 0;

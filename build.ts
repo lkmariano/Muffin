@@ -10,7 +10,9 @@ import { visit } from 'unist-util-visit';
 import { wikilinkPlugin } from './plugins/wikilinks.js'
 import { withBasePath } from './basePath.js'
 import { buildExplorerTree, renderExplorer } from './plugins/explorer.js'
-import { loadThemeVars } from './plugins/theme.js'
+import { generateThemeCss, type ThemeConfig } from './plugins/theme.js'
+
+//Reads every markdown file in the content directory and its subdirectories, returning an array of file paths.
 
 async function getMarkdownFiles (directory: string): Promise<string[]> {
     let markdownFiles: string[] = [];
@@ -29,6 +31,8 @@ async function getMarkdownFiles (directory: string): Promise<string[]> {
   return markdownFiles;
 }
 
+//formatDate formats a Date object into a string in the format YYYY-MM-DD. This is used to display the last updated date of a page in the generated HTML.
+
 function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
@@ -43,6 +47,19 @@ type Page = {
     backlinks?: Array<{ title: string; href: string }>;
 };
 
+// TODO(Phase 1): this belongs in a dedicated config loader once one
+// exists. Kept here as an explicit placeholder so theme.ts never has
+// to touch fs.
+
+//loads the theme config from the json file at the given path and returns it as a ThemeConfig (colors, fonts, etc.) object and also generates the theme.css file in the muffin output directory.
+
+function loadThemeConfig(configPath: string): ThemeConfig {
+  const raw = fs.readFileSync(configPath, "utf-8");
+  return JSON.parse(raw) as ThemeConfig;
+}
+
+//parses all .md files in the content directory, extracting their frontmatter, content, and backlinks. It returns an array of Page objects containing this information.
+
 async function parseFiles() {
   const markdownFiles = await getMarkdownFiles("./content");
   const parsedData: Page[] = [];
@@ -50,6 +67,8 @@ async function parseFiles() {
   console.log("markdownFiles:", markdownFiles);
   const forwardLinks: Record<string, string[]> = {};
 
+  //
+  
   const slugMap: Record<string, string[]> = {};
   for (const file of markdownFiles) {
     const slug = getSlug(file);
@@ -59,6 +78,10 @@ async function parseFiles() {
     slugMap[slug].push(file);
   }
 
+  // NOTE (Phase 3 known inefficiency): every file is parsed twice — once
+  // here purely to extract wikilink targets for the forward/backlink
+  // index, and again below to produce the final HTML. Worth fixing when
+  // the Markdown pipeline is extracted into its own module.
   for (const file of markdownFiles) {
     const fileContent = fs.readFileSync(file, "utf-8");
     const matterData = matter(fileContent);
@@ -180,7 +203,8 @@ parseFiles()
         const explorerHtml = renderExplorer(explorerTree);
         writeOutput(parsedData, template, explorerHtml);
         fs.copyFileSync("./templates/styles.css", "./muffin/styles.css");
-        fs.writeFileSync("./muffin/theme.css", loadThemeVars("./muffin.config.json"), "utf-8");
+        const themeConfig = loadThemeConfig("./muffin.config.json");
+        fs.writeFileSync("./muffin/theme.css", generateThemeCss(themeConfig), "utf-8");
         fs.copyFileSync("./muffin/projects.html", "./muffin/index.html");
     })
     .catch((error) => {

@@ -12,7 +12,9 @@ import { withBasePath } from './basePath.js'
 import { buildExplorerTree, renderExplorer } from './plugins/explorer.js'
 import { generateThemeCss, type ThemeConfig } from './plugins/theme.js'
 
-//Reads every markdown file in the content directory and its subdirectories, returning an array of file paths.
+// Reads every markdown file in the content directory and its subdirectories, returning an array of file paths.
+
+// Belongs 
 
 async function getMarkdownFiles (directory: string): Promise<string[]> {
     let markdownFiles: string[] = [];
@@ -28,14 +30,18 @@ async function getMarkdownFiles (directory: string): Promise<string[]> {
       }
     }
 
+  // returns all the markdown files inside the folder (/content)
+
   return markdownFiles;
 }
 
-//formatDate formats a Date object into a string in the format YYYY-MM-DD. This is used to display the last updated date of a page in the generated HTML.
+// formatDate formats a Date object into a string in the format YYYY-MM-DD. This is used to display the last updated date of a page in the generated HTML.
 
 function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
+
+// pages object
 
 type Page = {
     path: string;
@@ -47,18 +53,15 @@ type Page = {
     backlinks?: Array<{ title: string; href: string }>;
 };
 
-// TODO(Phase 1): this belongs in a dedicated config loader once one
-// exists. Kept here as an explicit placeholder so theme.ts never has
-// to touch fs.
 
-//loads the theme config from the json file at the given path and returns it as a ThemeConfig (colors, fonts, etc.) object and also generates the theme.css file in the muffin output directory.
+// loads the theme config from the json file at the given path and returns it as a ThemeConfig (colors, fonts, etc.) object and also generates the theme.css file in the muffin output directory.
 
 function loadThemeConfig(configPath: string): ThemeConfig {
   const raw = fs.readFileSync(configPath, "utf-8");
   return JSON.parse(raw) as ThemeConfig;
 }
 
-//parses all .md files in the content directory, extracting their frontmatter, content, and backlinks. It returns an array of Page objects containing this information.
+// parses all .md files in the content directory, extracting their frontmatter, content, and backlinks. It returns an array of Page objects containing this information.
 
 async function parseFiles() {
   const markdownFiles = await getMarkdownFiles("./content");
@@ -67,14 +70,25 @@ async function parseFiles() {
   console.log("markdownFiles:", markdownFiles);
   const forwardLinks: Record<string, string[]> = {};
 
-  //
+  // Creates a slugMap to record each wikilik/slug will be stored
   
   const slugMap: Record<string, string[]> = {};
+
+  // for all files in markdown files 
+  // gets the slug for each .md file
+
   for (const file of markdownFiles) {
     const slug = getSlug(file);
+
+    // if the current slug is not in the group of currently mapped slugs
+    // create an empty array for that slug in slugMap
+
     if (!slugMap[slug]) {
       slugMap[slug] = [];
     }
+
+    // if it is push the file into the array that is inside that slug
+
     slugMap[slug].push(file);
   }
 
@@ -82,27 +96,53 @@ async function parseFiles() {
   // here purely to extract wikilink targets for the forward/backlink
   // index, and again below to produce the final HTML. Worth fixing when
   // the Markdown pipeline is extracted into its own module.
+
+  // BACKLINKS / LINK DISCOVERY
+
   for (const file of markdownFiles) {
     const fileContent = fs.readFileSync(file, "utf-8");
+
+    // Gets frontmatter / content
     const matterData = matter(fileContent);
+
+    // Content Tranformation
     const linkExtractor = unified()
         .use(remarkParse)
         .use(wikilinkPlugin, slugMap, file);
 
+
+    // Content Parsing
     const linkTree = linkExtractor.parse(matterData.content);
+
+    // Wikilink Transformation
+
     const transformedLinkTree = await linkExtractor.run(linkTree);
+
+    // Page Identifier
+
     const sourceSlug = getSlug(file);
+
+    // Site Graph / Link Discovery
+
     visit(transformedLinkTree, 'link', (node: any) => {
       if (!node.data || !node.data.isWikilink) {
         return;
       }
+
+      // Determine Link page 
+
       const targetSlug = getSlug(node.url.replace(/\.html$/, ".md"));
       if (!forwardLinks[sourceSlug]) {
         forwardLinks[sourceSlug] = [];
       }
+
+      // Stores link information 
+
       forwardLinks[sourceSlug].push(targetSlug);
     });
   }
+
+  //Looks for backlinks
 
   const backlinks: Record<string, string[]> = {};
   for (const [source, targets] of Object.entries(forwardLinks)) {
@@ -118,9 +158,17 @@ async function parseFiles() {
 
   console.log("backlinks", backlinks);
 
+
+  // Reads content parses and transforms markdown, Extracts information 
+
   for (const file of markdownFiles) {
+
+    // Content Reader
+
     const fileContent = fs.readFileSync(file, "utf-8");
     const matterData = matter(fileContent);
+
+    
 
     const processor = unified()
       .use(remarkParse)
@@ -211,3 +259,7 @@ parseFiles()
         console.error("Build failed:", error);
         process.exit(1);
     });
+
+
+    // function build()
+

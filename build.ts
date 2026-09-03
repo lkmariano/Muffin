@@ -12,9 +12,13 @@ import { withBasePath } from './basePath.js'
 import { buildExplorerTree, renderExplorer } from './plugins/explorer.js'
 import { generateThemeCss, type ThemeConfig } from './plugins/theme.js'
 
-// Reads every markdown file in the content directory and its subdirectories, returning an array of file paths.
-
-// Belongs 
+// function getMarkdown Files
+// 
+// Current Role: Reads every markdown file in the content directory and its subdirectories, returning an array of file paths.
+// 
+// Architectural Role: Content
+// 
+// Future Location: src/content/loader.ts
 
 async function getMarkdownFiles (directory: string): Promise<string[]> {
     let markdownFiles: string[] = [];
@@ -35,13 +39,31 @@ async function getMarkdownFiles (directory: string): Promise<string[]> {
   return markdownFiles;
 }
 
-// formatDate formats a Date object into a string in the format YYYY-MM-DD. This is used to display the last updated date of a page in the generated HTML.
+
+
+
+// function formatDate 
+// Current Role: formats a Date object into a string in the format YYYY-MM-DD. This is used to display the last updated date of a page in the generated HTML.
+//
+// Future Location: src/utils/date.ts
 
 function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-// pages object
+
+
+
+
+// Pages Object
+// Current Role: Makes a Page Objects to show what should be inside a page
+//
+// Architectural Role: Pages
+//
+// Different pages type:
+// type PageType = "Default" | "Portfolio" | "Photo" | "Note";
+//
+// Future Location: src/pages/registry.ts
 
 type Page = {
     path: string;
@@ -54,23 +76,64 @@ type Page = {
 };
 
 
-// loads the theme config from the json file at the given path and returns it as a ThemeConfig (colors, fonts, etc.) object and also generates the theme.css file in the muffin output directory.
+// function loadThemeConfig
+//
+// Current Function: loads the theme config from the json file at the given path and returns it as a ThemeConfig (colors, fonts, etc.) object and also generates the theme.css file 
+// in the muffin output directory.
+//
+// Architectural Role: Theme
+//
+// Future Location: src/theme/loader.ts
 
 function loadThemeConfig(configPath: string): ThemeConfig {
   const raw = fs.readFileSync(configPath, "utf-8");
   return JSON.parse(raw) as ThemeConfig;
 }
 
-// parses all .md files in the content directory, extracting their frontmatter, content, and backlinks. It returns an array of Page objects containing this information.
+
+
+// Responsibility:
+// Currently acts as the main content-processing function.
+// It discovers files, creates page identifiers, extracts wikilinks,
+// builds the site graph, processes Markdown into HTML, and creates
+// the final Page objects.
+//
+// Current architectural responsibilities:
+// 1. Content discovery
+// 2. Page identity / slug mapping
+// 3. Wikilink transformation
+// 4. Link extraction
+// 5. Site graph construction
+// 6. Markdown-to-HTML rendering
+// 7. Page object creation
+//
+// Target architecture:
+// These responsibilities should eventually be separated into
+// Content, Transformers, Site Graph, Rendering, and Domain/Page modules.
+//
+// Future role of parseFiles():
+// This function should eventually become a coordinator for content
+// processing rather than implementing every step itself.
+
 
 async function parseFiles() {
+
+  // Function: Gets alll markdown files
+  // Architectural Role: Content
+
   const markdownFiles = await getMarkdownFiles("./content");
   const parsedData: Page[] = [];
 
   console.log("markdownFiles:", markdownFiles);
   const forwardLinks: Record<string, string[]> = {};
 
-  // Creates a slugMap to record each wikilik/slug will be stored
+  // Function: Creates a slugMap to record each wikilik/slug will be stored
+  // 
+  // Architectural Role: Page/Content domain
+  //
+  // Slug Resolution should be separate from backlinks and wikilinks rendering
+  // 
+  // 
   
   const slugMap: Record<string, string[]> = {};
 
@@ -168,7 +231,7 @@ async function parseFiles() {
     const fileContent = fs.readFileSync(file, "utf-8");
     const matterData = matter(fileContent);
 
-    
+    // Markdown to html (Contnent Processor)
 
     const processor = unified()
       .use(remarkParse)
@@ -181,6 +244,8 @@ async function parseFiles() {
     const mtime = fs.statSync(file).mtime;
     const statusValue = matterData.data.status;
 
+    // Page/domain layer
+
     parsedData.push({
       path: file,
       title: getTitle(file),
@@ -188,6 +253,9 @@ async function parseFiles() {
       content: String(processedContent),
       ...(typeof statusValue === "string" ? { status: statusValue } : {}),
       updated: formatDate(mtime),
+
+      // Backlinks inside the page 
+
       backlinks: (backlinks[slug] ?? [])
         .map((sourceSlug) => slugMap[sourceSlug]?.[0])
         .filter((filePath): filePath is string => typeof filePath === "string")

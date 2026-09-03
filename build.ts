@@ -53,8 +53,6 @@ function formatDate(date: Date): string {
 
 
 
-
-
 // Pages Object
 // Current Role: Makes a Page Objects to show what should be inside a page
 //
@@ -205,7 +203,7 @@ async function parseFiles() {
     });
   }
 
-  //Looks for backlinks
+  // Looks for backlinks
 
   const backlinks: Record<string, string[]> = {};
   for (const [source, targets] of Object.entries(forwardLinks)) {
@@ -226,12 +224,12 @@ async function parseFiles() {
 
   for (const file of markdownFiles) {
 
-    // Content Reader
+    // Content loader
 
     const fileContent = fs.readFileSync(file, "utf-8");
     const matterData = matter(fileContent);
 
-    // Markdown to html (Contnent Processor)
+    // Markdown to html (Markdown Processor)
 
     const processor = unified()
       .use(remarkParse)
@@ -327,7 +325,3 @@ parseFiles()
         console.error("Build failed:", error);
         process.exit(1);
     });
-
-
-    // function build()
-

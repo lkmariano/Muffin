@@ -104,11 +104,4 @@ getMarkdownFiles("./content")              → src/content/loader.ts
 `.github/workflows/deploy.yaml` builds and deploys to GitHub Pages on push to
 `main`, with `MUFFIN_BASE_PATH: /Muffin` set in CI.
 
-## Current Work: Phase 2 — Domain Models
-
-Phase 1 is complete. Phase 2 begins by introducing the domain model,
-starting with the `Page` model in `src/domain/page.ts`.
-
-Replace the temporary `Page` type currently defined in `build.ts`
-with the domain model incrementally. Do not introduce all domain
-models or page types at once.
+## Current Work: Phase 2 — Refactor build.ts

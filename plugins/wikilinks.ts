@@ -1,5 +1,5 @@
 import { findAndReplace } from 'mdast-util-find-and-replace'
-import path from 'path';
+import path from 'node:path';
 import { getTitle } from '../util.js';
 import { withBasePath } from '../basePath.js';
 

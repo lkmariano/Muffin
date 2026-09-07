@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { generateThemeCss, type ThemeConfig } from "../../plugins/theme.js";
+import { generateThemeCss } from "../../plugins/theme.js";
+import { loadThemeConfig } from "../theme/config.js";
 import { renderPage } from "../rendering/page.js";
 
 export interface OutputPage {
@@ -10,11 +11,6 @@ export interface OutputPage {
   status?: string;
   updated: string;
   backlinks?: Array<{ title: string; href: string }>;
-}
-
-function loadThemeConfig(configPath: string): ThemeConfig {
-  const raw = fs.readFileSync(configPath, "utf-8");
-  return JSON.parse(raw) as ThemeConfig;
 }
 
 const PAGE_TEMPLATE = "./templates/page.html";

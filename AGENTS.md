@@ -67,13 +67,16 @@ For architectural/refactoring plans, return:
 | `./content/*.md` | source vault (nested folders supported) |
 | `./templates/page.html` | HTML shell with `{{PLACEHOLDER}}` tokens |
 | `./templates/styles.css` | global stylesheet using CSS variables |
+| `./public/` | static public assets (copied to output) |
 | `./src/content/` | file discovery (`loader.ts`) and markdown processing (`markdown.ts`) |
 | `./src/graph/` | backlink graph construction (`backlinks.ts`) |
 | `./src/rendering/` | pure HTML generation (`page.ts`) — no `fs` imports |
-| `./src/output/` | file writing (`writer.ts`) and static asset copy |
+| `./src/output/` | file writing (`writer.ts`), static asset copy (`assets.ts`), and template loading (`templates.ts`) |
+| `./src/theme/` | theme config loading from disk (`config.ts`) |
 | `./plugins/` | `wikilinks.ts` (remark plugin), `explorer.ts` (tree + render), `theme.ts` (config → CSS vars) |
-| `./tests/` | vitest unit + integration tests |
+| `./tests/` | vitest unit + integration tests, shared helpers |
 | `./muffin/` | build output (gitignored) |
+| `ARCHITECTURE.md` | architecture source of truth |
 | `muffin.config.json` | theme tokens (colors, fonts, spacing, layout) |
 | `basePath.ts` | `withBasePath()` — URL prefixing via `MUFFIN_BASE_PATH` |
 | `util.ts` | slug/title helpers (`getSlug`, `getTitle`) |
@@ -104,11 +107,15 @@ getMarkdownFiles("./content")              → src/content/loader.ts
 `.github/workflows/deploy.yaml` builds and deploys to GitHub Pages on push to
 `main`, with `MUFFIN_BASE_PATH: /Muffin` set in CI.
 
-## Current Work: Phase 2 — Domain Models
+## Current Work: Phase 3 — Domain Models
 
-Phase 1 is complete. Phase 2 begins by introducing the domain model,
-starting with the `Page` model in `src/domain/page.ts`.
+Phase 2 is complete. Phase 3 begins by introducing Muffin's domain model, starting with the `Page` model in `src/domain/page.ts`.
 
-Replace the temporary `Page` type currently defined in `build.ts`
-with the domain model incrementally. Do not introduce all domain
-models or page types at once.
+Replace the temporary `Page` type currently defined in `build.ts` with the domain `Page` model incrementally.
+
+Start with `Page` only. Do not introduce `Link`, `PageMetadata`, `SiteGraph`, additional page types, or other domain models yet.
+
+Keep the existing build behavior unchanged. The goal of this phase is to establish `Page` as the shared domain representation without performing unrelated refactoring.
+
+Inspect the current codebase first, determine the smallest coherent change, present the implementation plan, and wait for approval before making changes.
+

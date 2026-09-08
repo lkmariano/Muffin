@@ -12,7 +12,7 @@ const TEMPLATE = `<!doctype html>
 const page: RenderablePage = {
   title: "My Page",
   content: "<p>hello</p>",
-  updated: "2026-01-01",
+  metadata: { frontmatter: {}, updated: "2026-01-01" },
 };
 
 describe("renderPage", () => {
@@ -37,7 +37,7 @@ describe("renderPage", () => {
   it("renders status and backlinks when present", () => {
     const withBacklinks: RenderablePage = {
       ...page,
-      status: "published",
+      metadata: { ...page.metadata, status: "published" },
       backlinks: [{ title: "Other", href: "/Other.html" }],
     };
 

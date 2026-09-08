@@ -1,11 +1,11 @@
 import { withBasePath } from "../../basePath.js";
+import type { Backlink, PageMetadata } from "../domain/page.js";
 
 export interface RenderablePage {
   title: string;
   content: string;
-  status?: string;
-  updated: string;
-  backlinks?: Array<{ title: string; href: string }>;
+  metadata: PageMetadata;
+  backlinks?: Backlink[];
 }
 
 export function renderPage(
@@ -23,10 +23,10 @@ export function renderPage(
   const themeCssHref = withBasePath("/theme.css");
 
   const metaParts: string[] = [];
-  if (page.status) {
-    metaParts.push(`<span class="page-status">${page.status}</span>`);
+  if (page.metadata.status) {
+    metaParts.push(`<span class="page-status">${page.metadata.status}</span>`);
   }
-  metaParts.push(`<span class="page-updated">Updated ${page.updated}</span>`);
+  metaParts.push(`<span class="page-updated">Updated ${page.metadata.updated}</span>`);
   const pageMetaHtml = `<div class="page-meta">${metaParts.join("")}</div>`;
 
   return template

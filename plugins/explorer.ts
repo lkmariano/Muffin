@@ -2,15 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getSlug, getTitle } from '../util.js';
 import { withBasePath } from '../basePath.js';
+import type { ExplorerNode } from '../src/domain/explorer.js';
 
-export interface ExplorerNode {
-  name: string;
-  path: string;
-  type: 'file' | 'folder';
-  slug?: string;
-  href?: string;
-  children?: ExplorerNode[];
-}
+export type { ExplorerNode };
 
 export function buildExplorerTree(rootDir: string, relativePath = ''): ExplorerNode[] {
   const fullPath = path.join(rootDir, relativePath);

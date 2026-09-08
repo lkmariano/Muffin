@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildSiteGraph } from "../../src/graph/backlinks.js";
+import { getTitle } from "../../util.js";
+import { withBasePath } from "../../basePath.js";
 import { cleanupTempDir, makeTempDir, writeFile } from "../helpers.js";
+import path from "node:path";
 
 let dir: string;
 
@@ -11,6 +14,20 @@ beforeEach(() => {
 afterEach(() => {
   cleanupTempDir(dir);
 });
+
+function resolveBacklinks(
+  graph: { backlinks: Record<string, string[]> },
+  slug: string,
+  slugMap: Record<string, string[]>,
+): { title: string; href: string }[] {
+  return (graph.backlinks[slug] ?? [])
+    .map((sourceSlug) => slugMap[sourceSlug]?.[0])
+    .filter((filePath): filePath is string => typeof filePath === "string")
+    .map((filePath) => ({
+      title: getTitle(filePath),
+      href: withBasePath(`/${path.relative("./content", filePath).replace(/\.md$/, ".html").replace(/\\/g, "/")}`),
+    }));
+}
 
 describe("buildSiteGraph", () => {
   it("computes forward and back links from wikilinks", async () => {
@@ -50,7 +67,7 @@ describe("buildSiteGraph", () => {
     const slugMap = { alpha: [alpha], beta: [beta] };
     const graph = await buildSiteGraph([alpha, beta], slugMap);
 
-    const backlinks = graph.getBacklinks("beta");
+    const backlinks = resolveBacklinks(graph, "beta", slugMap);
     expect(backlinks).toHaveLength(1);
     expect(backlinks[0]?.title).toBe("Alpha");
     expect(backlinks[0]?.href.endsWith("Alpha.html")).toBe(true);
@@ -62,6 +79,6 @@ describe("buildSiteGraph", () => {
     const slugMap = { alpha: [alpha] };
     const graph = await buildSiteGraph([alpha], slugMap);
 
-    expect(graph.getBacklinks("alpha")).toEqual([]);
+    expect(resolveBacklinks(graph, "alpha", slugMap)).toEqual([]);
   });
 });

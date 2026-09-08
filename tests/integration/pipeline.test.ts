@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getMarkdownFiles } from "../../src/content/loader.js";
 import { buildSiteGraph } from "../../src/graph/backlinks.js";
 import { renderMarkdownFile } from "../../src/content/markdown.js";
-import { getSlug } from "../../util.js";
+import { getSlug, getTitle } from "../../util.js";
+import { withBasePath } from "../../basePath.js";
 import { cleanupTempDir, makeTempDir, writeFile } from "../helpers.js";
+import path from "node:path";
 
 let dir: string;
 
@@ -35,6 +37,15 @@ describe("content pipeline", () => {
 
     const graph = await buildSiteGraph(markdownFiles, slugMap);
 
+    const resolveBacklinks = (slug: string): Array<{ title: string; href: string }> =>
+      (graph.backlinks[slug] ?? [])
+        .map((sourceSlug) => slugMap[sourceSlug]?.[0])
+        .filter((filePath): filePath is string => typeof filePath === "string")
+        .map((filePath) => ({
+          title: getTitle(filePath),
+          href: withBasePath(`/${path.relative("./content", filePath).replace(/\.md$/, ".html").replace(/\\/g, "/")}`),
+        }));
+
     const pages: Array<{
       slug: string;
       html: string;
@@ -47,7 +58,7 @@ describe("content pipeline", () => {
         slug: getSlug(file),
         html,
         frontmatter,
-        backlinks: graph.getBacklinks(getSlug(file)),
+        backlinks: resolveBacklinks(getSlug(file)),
       });
     }
 

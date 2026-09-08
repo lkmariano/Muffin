@@ -1,23 +1,12 @@
 import fs from "node:fs";
-import path from "node:path";
 import matter from "gray-matter";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
-import { getSlug, getTitle } from "../../util.js";
-import { withBasePath } from "../../basePath.js";
+import { getSlug } from "../../util.js";
 import { wikilinkPlugin } from "../../plugins/wikilinks.js";
 
-export interface ResolvedBacklink {
-  title: string;
-  href: string;
-}
-
-export interface SiteLinkGraph {
-  forwardLinks: Record<string, string[]>;
-  backlinks: Record<string, string[]>;
-  getBacklinks(slug: string): ResolvedBacklink[];
-}
+import type { SiteGraph } from "../domain/siteGraph.js";
 
 async function extractWikilinkTargets(
   filePath: string,
@@ -48,7 +37,7 @@ async function extractWikilinkTargets(
 export async function buildSiteGraph(
   markdownFiles: string[],
   slugMap: Record<string, string[]>,
-): Promise<SiteLinkGraph> {
+): Promise<SiteGraph> {
   const forwardLinks: Record<string, string[]> = {};
 
   for (const file of markdownFiles) {
@@ -68,19 +57,8 @@ export async function buildSiteGraph(
     }
   }
 
-  function getBacklinks(slug: string): ResolvedBacklink[] {
-    return (backlinks[slug] ?? [])
-      .map((sourceSlug) => slugMap[sourceSlug]?.[0])
-      .filter((filePath): filePath is string => typeof filePath === "string")
-      .map((filePath) => ({
-        title: getTitle(filePath),
-        href: withBasePath(`/${path.relative("./content", filePath).replace(/\.md$/, ".html").replace(/\\/g, "/")}`),
-      }));
-  }
-
   return {
     forwardLinks,
     backlinks,
-    getBacklinks,
   };
 }

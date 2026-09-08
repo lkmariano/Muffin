@@ -4,7 +4,10 @@ import { buildExplorerTree, renderExplorer } from "./plugins/explorer.js";
 import { getMarkdownFiles } from "./src/content/loader.js";
 import { renderMarkdownFile } from "./src/content/markdown.js";
 import { buildSiteGraph } from "./src/graph/backlinks.js";
-import { writePages, writeStaticAssets } from "./src/output/writer.js";
+import { writePages } from "./src/output/writer.js";
+import { writeStaticAssets } from "./src/output/assets.js";
+import { loadPageTemplate } from "./src/output/templates.js";
+import { renderPage } from "./src/rendering/page.js";
 
 function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -73,7 +76,12 @@ parseFiles()
     }
     const explorerTree = buildExplorerTree("./content");
     const explorerHtml = renderExplorer(explorerTree);
-    writePages(parsedData, explorerHtml);
+    const template = loadPageTemplate();
+    const outputPages = parsedData.map((page) => ({
+      path: page.path,
+      renderedHtml: renderPage(page, template, explorerHtml),
+    }));
+    writePages(outputPages);
     writeStaticAssets();
   })
   .catch((error) => {

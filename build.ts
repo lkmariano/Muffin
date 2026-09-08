@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import { getSlug, getTitle } from "./util.js";
 import { buildExplorerTree, renderExplorer } from "./plugins/explorer.js";
 import { getMarkdownFiles } from "./src/content/loader.js";
@@ -47,10 +46,9 @@ async function parseFiles() {
   const graph = await buildSiteGraph(markdownFiles, slugMap);
 
   for (const file of markdownFiles) {
-    const { html, frontmatter } = await renderMarkdownFile(file, slugMap);
+    const { html, frontmatter, mtime } = await renderMarkdownFile(file, slugMap);
 
     const slug = getSlug(file);
-    const mtime = fs.statSync(file).mtime;
     const statusValue = frontmatter.status;
 
     parsedData.push({

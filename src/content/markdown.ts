@@ -9,6 +9,7 @@ import { wikilinkPlugin } from "../../plugins/wikilinks.js";
 export interface RenderMarkdownResult {
   html: string;
   frontmatter: Record<string, unknown>;
+  mtime: Date;
 }
 
 export async function renderMarkdownFile(
@@ -16,6 +17,7 @@ export async function renderMarkdownFile(
   slugMap: Record<string, string[]>,
 ): Promise<RenderMarkdownResult> {
   const fileContent = fs.readFileSync(filePath, "utf-8");
+  const mtime = fs.statSync(filePath).mtime;
   const matterData = matter(fileContent);
 
   const processor = unified()
@@ -29,5 +31,6 @@ export async function renderMarkdownFile(
   return {
     html: String(processedContent),
     frontmatter: matterData.data as Record<string, unknown>,
+    mtime,
   };
 }

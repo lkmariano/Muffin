@@ -25,9 +25,7 @@ Configuration → Content → Transformers → Site Graph → Renderer → Outpu
   separate from HTML generation.
 - **Page model:** everything maps to a structured object with
   `{ type, title, slug, content, metadata, links }`. Do not pass raw strings
-  between modules. Note: `build.ts` currently uses a temporary local `Page`
-  type (`{ path, title, frontmatter, content, status?, updated, backlinks? }`)
-  that will be replaced with the target model during Phase 2.
+  between modules. The domain `Page` model lives in `src/domain/page.ts`.
 - **Registry pattern:** match page types to layouts via a centralized mapper;
   do not write separate hardcoded build functions per page.
 
@@ -107,15 +105,16 @@ getMarkdownFiles("./content")              → src/content/loader.ts
 `.github/workflows/deploy.yaml` builds and deploys to GitHub Pages on push to
 `main`, with `MUFFIN_BASE_PATH: /Muffin` set in CI.
 
-## Current Work: Phase 3 — Domain Models
+## Current Work: Phase 5 — Content Processing Pipeline
 
-Phase 2 is complete. Phase 3 begins by introducing Muffin's domain model, starting with the `Page` model in `src/domain/page.ts`.
+Phase 5 is complete. The content processing pipeline has clean boundaries:
 
-Replace the temporary `Page` type currently defined in `build.ts` with the domain `Page` model incrementally.
+- **`src/content/markdown.ts`** — frontmatter extraction + MD→HTML transformation (coherent single responsibility)
+- **`src/content/loader.ts`** — file discovery + file stat metadata
+- **`plugins/wikilinks.ts`** — remark plugin for wikilink resolution
+- **`src/graph/backlinks.ts`** — site graph construction (forward/back links)
 
-Start with `Page` only. Do not introduce `Link`, `PageMetadata`, `SiteGraph`, additional page types, or other domain models yet.
+`build.ts` is a thin orchestrator (slug map, contentMap, graph, Page assembly, render, output).
 
-Keep the existing build behavior unchanged. The goal of this phase is to establish `Page` as the shared domain representation without performing unrelated refactoring.
-
-Inspect the current codebase first, determine the smallest coherent change, present the implementation plan, and wait for approval before making changes.
+No further content-layer refactoring is justified at the current scale.
 

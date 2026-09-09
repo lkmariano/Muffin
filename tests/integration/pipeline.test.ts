@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import fs from "node:fs";
 import { getMarkdownFiles } from "../../src/content/loader.js";
 import { buildSiteGraph } from "../../src/graph/backlinks.js";
-import { renderMarkdownFile } from "../../src/content/markdown.js";
+import { renderMarkdown } from "../../src/content/markdown.js";
 import { getSlug, getTitle } from "../../util.js";
 import { withBasePath } from "../../basePath.js";
 import { cleanupTempDir, makeTempDir, writeFile } from "../helpers.js";
@@ -35,7 +36,12 @@ describe("content pipeline", () => {
       slugMap[slug].push(file);
     }
 
-    const graph = await buildSiteGraph(markdownFiles, slugMap);
+    const contentMap = new Map<string, string>();
+    for (const file of markdownFiles) {
+      contentMap.set(file, fs.readFileSync(file, "utf-8"));
+    }
+
+    const graph = await buildSiteGraph(contentMap, slugMap);
 
     const resolveBacklinks = (slug: string): Array<{ title: string; href: string }> =>
       (graph.backlinks[slug] ?? [])
@@ -53,7 +59,7 @@ describe("content pipeline", () => {
       backlinks: Array<{ title: string; href: string }>;
     }> = [];
     for (const file of markdownFiles) {
-      const { html, frontmatter } = await renderMarkdownFile(file, slugMap);
+      const { html, frontmatter } = await renderMarkdown(contentMap.get(file)!, slugMap, file);
       pages.push({
         slug: getSlug(file),
         html,

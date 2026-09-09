@@ -2,7 +2,7 @@ import { getSlug, getTitle } from "./util.js";
 import { withBasePath } from "./basePath.js";
 import { buildExplorerTree, renderExplorer } from "./plugins/explorer.js";
 import { getFileMeta, getMarkdownFiles } from "./src/content/loader.js";
-import { renderMarkdownFile } from "./src/content/markdown.js";
+import { renderMarkdown } from "./src/content/markdown.js";
 import { buildSiteGraph } from "./src/graph/backlinks.js";
 import { writePages } from "./src/output/writer.js";
 import { writeStaticAssets } from "./src/output/assets.js";
@@ -10,6 +10,7 @@ import { loadPageTemplate } from "./src/output/templates.js";
 import { renderPage } from "./src/rendering/page.js";
 import type { Backlink, Page } from "./src/domain/page.js";
 import type { SiteGraph } from "./src/domain/siteGraph.js";
+import fs from "node:fs";
 import path from "node:path";
 
 function formatDate(date: Date): string {
@@ -46,10 +47,16 @@ async function parseFiles() {
     slugMap[slug].push(file);
   }
 
-  const graph = await buildSiteGraph(markdownFiles, slugMap);
+  const contentMap = new Map<string, string>();
+  for (const file of markdownFiles) {
+    contentMap.set(file, fs.readFileSync(file, "utf-8"));
+  }
+
+  const graph = await buildSiteGraph(contentMap, slugMap);
 
   for (const file of markdownFiles) {
-    const { html, frontmatter } = await renderMarkdownFile(file, slugMap);
+    const rawContent = contentMap.get(file)!;
+    const { html, frontmatter } = await renderMarkdown(rawContent, slugMap, file);
     const { mtime } = await getFileMeta(file);
 
     const slug = getSlug(file);

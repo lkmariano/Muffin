@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import matter from "gray-matter";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
@@ -9,15 +8,15 @@ import { wikilinkPlugin } from "../../plugins/wikilinks.js";
 import type { SiteGraph } from "../domain/siteGraph.js";
 
 async function extractWikilinkTargets(
-  filePath: string,
+  content: string,
+  currentFile: string,
   slugMap: Record<string, string[]>,
 ): Promise<string[]> {
-  const fileContent = fs.readFileSync(filePath, "utf-8");
-  const matterData = matter(fileContent);
+  const matterData = matter(content);
 
   const linkExtractor = unified()
     .use(remarkParse)
-    .use(wikilinkPlugin, slugMap, filePath);
+    .use(wikilinkPlugin, slugMap, currentFile);
 
   const linkTree = linkExtractor.parse(matterData.content);
   const transformedLinkTree = await linkExtractor.run(linkTree);
@@ -35,14 +34,14 @@ async function extractWikilinkTargets(
 }
 
 export async function buildSiteGraph(
-  markdownFiles: string[],
+  contentMap: Map<string, string>,
   slugMap: Record<string, string[]>,
 ): Promise<SiteGraph> {
   const forwardLinks: Record<string, string[]> = {};
 
-  for (const file of markdownFiles) {
+  for (const [file, content] of contentMap) {
     const sourceSlug = getSlug(file);
-    forwardLinks[sourceSlug] = await extractWikilinkTargets(file, slugMap);
+    forwardLinks[sourceSlug] = await extractWikilinkTargets(content, file, slugMap);
   }
 
   const backlinks: Record<string, string[]> = {};

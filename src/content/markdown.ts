@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import matter from "gray-matter";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
@@ -11,16 +10,16 @@ export interface RenderMarkdownResult {
   frontmatter: Record<string, unknown>;
 }
 
-export async function renderMarkdownFile(
-  filePath: string,
+export async function renderMarkdown(
+  content: string,
   slugMap: Record<string, string[]>,
+  currentFile: string,
 ): Promise<RenderMarkdownResult> {
-  const fileContent = fs.readFileSync(filePath, "utf-8");
-  const matterData = matter(fileContent);
+  const matterData = matter(content);
 
   const processor = unified()
     .use(remarkParse)
-    .use(wikilinkPlugin, slugMap, filePath)
+    .use(wikilinkPlugin, slugMap, currentFile)
     .use(remarkRehype)
     .use(rehypeStringify);
 

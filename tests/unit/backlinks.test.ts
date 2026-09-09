@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import fs from "node:fs";
 import { buildSiteGraph } from "../../src/graph/backlinks.js";
 import { getTitle } from "../../util.js";
 import { withBasePath } from "../../basePath.js";
@@ -14,6 +15,14 @@ beforeEach(() => {
 afterEach(() => {
   cleanupTempDir(dir);
 });
+
+function buildContentMap(filePaths: string[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const file of filePaths) {
+    map.set(file, fs.readFileSync(file, "utf-8"));
+  }
+  return map;
+}
 
 function resolveBacklinks(
   graph: { backlinks: Record<string, string[]> },
@@ -41,7 +50,7 @@ describe("buildSiteGraph", () => {
       gamma: [gamma],
     };
 
-    const graph = await buildSiteGraph([alpha, beta, gamma], slugMap);
+    const graph = await buildSiteGraph(buildContentMap([alpha, beta, gamma]), slugMap);
 
     expect(graph.forwardLinks["alpha"]).toEqual(["beta", "gamma"]);
     expect(graph.forwardLinks["beta"]).toEqual(["alpha"]);
@@ -55,7 +64,7 @@ describe("buildSiteGraph", () => {
     const target = writeFile(dir, "Target.md", "# Target");
 
     const slugMap = { source: [source], target: [target] };
-    const graph = await buildSiteGraph([source, target], slugMap);
+    const graph = await buildSiteGraph(buildContentMap([source, target]), slugMap);
 
     expect(graph.backlinks["target"]).toEqual(["source"]);
   });
@@ -65,7 +74,7 @@ describe("buildSiteGraph", () => {
     const beta = writeFile(dir, "Beta.md", "# Beta");
 
     const slugMap = { alpha: [alpha], beta: [beta] };
-    const graph = await buildSiteGraph([alpha, beta], slugMap);
+    const graph = await buildSiteGraph(buildContentMap([alpha, beta]), slugMap);
 
     const backlinks = resolveBacklinks(graph, "beta", slugMap);
     expect(backlinks).toHaveLength(1);
@@ -77,7 +86,7 @@ describe("buildSiteGraph", () => {
     const alpha = writeFile(dir, "Alpha.md", "# Alpha");
 
     const slugMap = { alpha: [alpha] };
-    const graph = await buildSiteGraph([alpha], slugMap);
+    const graph = await buildSiteGraph(buildContentMap([alpha]), slugMap);
 
     expect(resolveBacklinks(graph, "alpha", slugMap)).toEqual([]);
   });

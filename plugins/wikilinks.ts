@@ -1,7 +1,7 @@
 import { findAndReplace } from 'mdast-util-find-and-replace'
 import path from 'node:path';
 import { visit } from 'unist-util-visit';
-import { getTitle, toHtmlPath } from '../util.js';
+import { getSlug, getTitle, toHtmlPath } from '../util.js';
 import { withBasePath } from '../basePath.js';
 
 export function wikilinkPlugin(slugsMap: Record<string, string[]>, currentFile: string): (tree: any) => void {
@@ -11,7 +11,7 @@ export function wikilinkPlugin(slugsMap: Record<string, string[]>, currentFile: 
       (value: string, capturedText: string) => {
         const [rawTargetPart, rawDisplay] = capturedText.split('|');
         const rawTarget: string = rawTargetPart ?? capturedText;
-        const slug = rawTarget.toLowerCase().replace(/[\s_]+/g, '-');
+        const slug = getSlug(rawTarget);
         const resolved = resolveWikilink(currentFile, slug, slugsMap);
         const displayText: string = rawDisplay ?? (resolved ? getTitle(resolved) : rawTarget);
 

@@ -22,6 +22,17 @@ describe("loadContent", () => {
     expect(contents).toHaveLength(2);
   });
 
+  it("derives a root-relative relPath for each file", async () => {
+    writeFile(dir, "Root.md", "# Root");
+    writeFile(dir, "Sub/Nested.md", "# Nested");
+
+    const { contents } = await loadContent(dir);
+    const root = contents.find((c) => c.relPath === "Root.md");
+    const nested = contents.find((c) => c.relPath === "Sub/Nested.md");
+    expect(root).toBeDefined();
+    expect(nested).toBeDefined();
+  });
+
   it("parses frontmatter into the frontmatter field", async () => {
     writeFile(dir, "Page.md", "---\ntitle: My Page\nstatus: draft\n---\n\nBody here.");
 

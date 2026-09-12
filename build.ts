@@ -43,17 +43,17 @@ async function parseFiles() {
     });
   }
 
-  return parsedData;
+  return { parsedData, contents };
 }
 
 console.log("Parsing markdown files...");
 parseFiles()
-  .then((parsedData) => {
+  .then(({ parsedData, contents }) => {
     if (parsedData.length === 0) {
       console.log("No pages found to render.");
       return;
     }
-    const explorerTree = buildExplorerTree("./content");
+    const explorerTree = buildExplorerTree(contents);
     const explorerHtml = renderExplorer(explorerTree, BASE_PATH);
     const template = loadPageTemplate();
     const outputPages = parsedData.map((page) => ({

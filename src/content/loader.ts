@@ -5,6 +5,7 @@ import { getSlug } from "../../util.js";
 
 export type LoadedContent = {
   path: string;
+  relPath: string;
   frontmatter: Record<string, unknown>;
   body: string;
   mtime: Date;
@@ -46,12 +47,26 @@ export async function loadContent(directory: string): Promise<LoadedContentResul
 
     slugMap[slug].push(file);
 
+    const relPath = path.relative(directory, file);
+    const firstSegment = relPath.split(path.sep)[0];
+    if (
+      !relPath ||
+      relPath === "." ||
+      path.isAbsolute(relPath) ||
+      firstSegment === ".."
+    ) {
+      throw new Error(
+        `Cannot derive a valid relative path for "${file}" from content root "${directory}".`,
+      );
+    }
+
     const raw = fs.readFileSync(file, "utf-8");
     const { data, content } = matter(raw);
     const mtime = fs.statSync(file).mtime;
 
     return {
       path: file,
+      relPath,
       frontmatter: data as Record<string, unknown>,
       body: content,
       mtime,

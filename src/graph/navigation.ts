@@ -1,45 +1,64 @@
-import fs from "node:fs";
-import path from "node:path";
 import { getSlug, getTitle } from "../../util.js";
+import type { LoadedContent } from "../content/loader.js";
 import type { ExplorerNode } from "../domain/explorer.js";
 
-export function buildExplorerTree(rootDir: string, relativePath = ""): ExplorerNode[] {
-  const fullPath = path.join(rootDir, relativePath);
-  const entries = fs.readdirSync(fullPath, { withFileTypes: true });
+export function buildExplorerTree(contents: LoadedContent[]): ExplorerNode[] {
+  const relPaths = contents
+    .map((content) => content.relPath)
+    .filter((relPath) => !hasDotSegment(relPath));
 
-  const nodes: ExplorerNode[] = [];
+  return buildDirectory(relPaths, "");
+}
 
-  for (const entry of entries) {
-    if (entry.name.startsWith(".")) continue;
+function hasDotSegment(relPath: string): boolean {
+  return relPath.split(/[\\/]/).some((segment) => segment.startsWith("."));
+}
 
-    const entryRelPath = path.join(relativePath, entry.name);
+function buildDirectory(relPaths: string[], folderPath: string): ExplorerNode[] {
+  const groups: Record<string, string[]> = {};
 
-    if (entry.isDirectory()) {
-      const children = buildExplorerTree(rootDir, entryRelPath);
-      if (children.length === 0) continue;
-
-      nodes.push({
-        name: entry.name,
-        path: entryRelPath,
-        type: "folder",
-        children,
-      });
-    } else if (entry.isFile() && entry.name.endsWith(".md")) {
-      const href = entryRelPath.replace(/\.md$/, ".html").replace(/\\/g, "/");
-      nodes.push({
-        name: getTitle(entry.name),
-        slug: getSlug(entry.name),
-        href,
-        path: entryRelPath,
-        type: "file",
-      });
+  for (const relPath of relPaths) {
+    const segments = relPath.split(/[\\/]/);
+    const first = segments[0] ?? relPath;
+    const rest = segments.slice(1);
+    if (!groups[first]) {
+      groups[first] = [];
+    }
+    if (rest.length > 0) {
+      groups[first]!.push(rest.join("/"));
     }
   }
 
-  nodes.sort((a, b) => {
-    if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
-    return a.name.localeCompare(b.name);
+  const entries = Object.entries(groups).sort(([na], [nb]) => {
+    const aFolder = groups[na]!.length > 0;
+    const bFolder = groups[nb]!.length > 0;
+    if (aFolder !== bFolder) return aFolder ? -1 : 1;
+    return na.localeCompare(nb);
   });
 
-  return nodes;
+  return entries.flatMap(([name, restPaths]) => {
+    const fullPath = folderPath ? `${folderPath}/${name}` : name;
+
+    if (restPaths.length === 0) {
+      return {
+        name: getTitle(name),
+        slug: getSlug(name),
+        href: fullPath.replace(/\.md$/, ".html").replace(/\\/g, "/"),
+        path: fullPath,
+        type: "file",
+      } as ExplorerNode;
+    }
+
+    const childNodes = buildDirectory(restPaths, fullPath);
+    if (childNodes.length === 0) {
+      return [];
+    }
+
+    return {
+      name,
+      path: fullPath,
+      type: "folder",
+      children: childNodes,
+    } as ExplorerNode;
+  });
 }

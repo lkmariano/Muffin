@@ -75,7 +75,7 @@ For architectural/refactoring plans, return:
 | `./public/` | reserved for future static assets — currently unused (not copied by `writeStaticAssets()`) |
 | `./src/config/` | site config loading from disk (`loader.ts` → `SiteConfig` with optional `homepage`) |
 | `./src/content/` | file discovery (`loader.ts`) and markdown processing (`markdown.ts`) |
-| `./src/graph/` | backlink graph (`backlinks.ts`) + explorer tree (`navigation.ts`) |
+| `./src/graph/` | backlink graph (`backlinks.ts`) + explorer tree (`navigation.ts`, built from `LoadedContent.relPath` — no filesystem access) |
 | `./src/domain/` | models: `page.ts` (`Page`, `Backlink`, `PageMetadata`), `siteGraph.ts` (`SiteGraph`), `explorer.ts` (`ExplorerNode`) |
 | `./src/rendering/` | pure HTML generation — `page.ts`, `explorer.ts` — no `fs` imports |
 | `./src/output/` | file writing (`writer.ts`), static assets + theme.css (`assets.ts`), template loading (`templates.ts`) |
@@ -104,10 +104,11 @@ tests run the pipeline end-to-end on temp dirs via `tests/helpers.ts`
 ```
 getMarkdownFiles("./content")              → src/content/loader.ts
   → slugMap (filename → candidate paths; supports duplicate filenames)
+  → loadContent → LoadedContent[] (full `path` + root-relative `relPath`)
   → parseMarkdown: body → mdast (remarkParse + wikilink plugin) once per file → src/content/markdown.ts
   → buildSiteGraph (forward/back links) from the parsed ASTs     → src/graph/backlinks.ts
   → renderMarkdownTree → HTML (from the same parsed ASTs)       → src/content/markdown.ts
-  → buildExplorerTree → ExplorerNode[]                          → src/graph/navigation.ts
+  → buildExplorerTree (from LoadedContent.relPath, no fs)       → src/graph/navigation.ts
   → renderExplorer → NAV html                                  → src/rendering/explorer.ts
   → loadConfig("./muffin.config.json")                         → src/config/loader.ts
   → writePages + writeStaticAssets (theme.css via css.ts)      → src/output/writer.ts + assets.ts

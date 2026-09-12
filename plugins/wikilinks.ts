@@ -1,5 +1,6 @@
 import { findAndReplace } from 'mdast-util-find-and-replace'
 import path from 'node:path';
+import { visit } from 'unist-util-visit';
 import { getTitle } from '../util.js';
 import { withBasePath } from '../basePath.js';
 
@@ -15,10 +16,9 @@ export function wikilinkPlugin(slugsMap: Record<string, string[]>, currentFile: 
         const displayText: string = rawDisplay ?? (resolved ? getTitle(resolved) : rawTarget);
 
         if (resolved) {
-          const relativePath = path.relative("./content", resolved).replace(/\.md$/, ".html").replace(/\\/g, "/");
           return {
             type: 'link',
-            url: withBasePath(`/${relativePath}`),
+            url: resolved,
             children: [{ type: 'text', value: displayText }],
             data: { isWikilink: true } as any,
           } as any;
@@ -30,6 +30,22 @@ export function wikilinkPlugin(slugsMap: Record<string, string[]>, currentFile: 
         }
       },
     ]);
+  };
+}
+
+export function wikilinkToUrl(filePath: string): string {
+  const relativePath = path.relative("./content", filePath).replace(/\.md$/, ".html").replace(/\\/g, "/");
+  return withBasePath(`/${relativePath}`);
+}
+
+export function wikilinkToUrlPlugin(): (tree: any) => void {
+  return (tree: any): void => {
+    visit(tree, "link", (node: any) => {
+      if (!node.data || !node.data.isWikilink) {
+        return;
+      }
+      node.url = wikilinkToUrl(node.url);
+    });
   };
 }
 
@@ -45,7 +61,7 @@ export function resolveWikilink(currentFile: string, slug: string, slugMap: Reco
 
   let folder = path.dirname(currentFile);
   while (true) {
-    const candidateInFolder = candidates.find(candidate => 
+    const candidateInFolder = candidates.find(candidate =>
       !path.relative(folder, candidate)
       .startsWith('..'));
     if (candidateInFolder) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveWikilink } from "../../plugins/wikilinks.js";
+import { resolveWikilink, wikilinkToUrl, wikilinkToUrlPlugin } from "../../plugins/wikilinks.js";
 
 describe("resolveWikilink", () => {
   it("resolves the single candidate for a slug", () => {
@@ -28,5 +28,32 @@ describe("resolveWikilink", () => {
   it("falls back to the first candidate when no parent folder matches", () => {
     const slugMap = { note: ["content/a/note.md", "content/b/note.md"] };
     expect(resolveWikilink("content/c/page.md", "note", slugMap)).toBe("content/a/note.md");
+  });
+});
+
+describe("wikilinkToUrl", () => {
+  it("converts a content file path to a site-relative output URL", () => {
+    expect(wikilinkToUrl("content/a.md")).toBe("/a.html");
+  });
+
+  it("preserves the folder structure for nested files", () => {
+    expect(wikilinkToUrl("content/projects/deep note.md")).toBe("/projects/deep note.html");
+  });
+});
+
+describe("wikilinkToUrlPlugin", () => {
+  it("converts only wikilink link urls from file paths to output URLs", () => {
+    const tree: any = {
+      type: "root",
+      children: [
+        { type: "link", url: "content/a.md", data: { isWikilink: true }, children: [] },
+        { type: "link", url: "https://example.com", children: [] },
+      ],
+    };
+
+    wikilinkToUrlPlugin()(tree);
+
+    expect(tree.children[0].url).toBe("/a.html");
+    expect(tree.children[1].url).toBe("https://example.com");
   });
 });

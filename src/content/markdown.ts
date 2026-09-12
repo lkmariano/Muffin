@@ -3,7 +3,7 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
-import { wikilinkPlugin } from "../../plugins/wikilinks.js";
+import { wikilinkPlugin, wikilinkToUrlPlugin } from "../../plugins/wikilinks.js";
 
 export interface RenderMarkdownResult {
   html: string;
@@ -20,6 +20,7 @@ export async function renderMarkdown(
   const processor = unified()
     .use(remarkParse)
     .use(wikilinkPlugin, slugMap, currentFile)
+    .use(wikilinkToUrlPlugin)
     .use(remarkRehype)
     .use(rehypeStringify);
 

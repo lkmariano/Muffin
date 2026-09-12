@@ -1,5 +1,4 @@
 import { getSlug, getTitle } from "./util.js";
-import { withBasePath } from "./basePath.js";
 import { buildExplorerTree, renderExplorer } from "./plugins/explorer.js";
 import { getFileMeta, getMarkdownFiles } from "./src/content/loader.js";
 import { renderMarkdown } from "./src/content/markdown.js";
@@ -8,10 +7,10 @@ import { writePages } from "./src/output/writer.js";
 import { writeStaticAssets } from "./src/output/assets.js";
 import { loadPageTemplate } from "./src/output/templates.js";
 import { renderPage } from "./src/rendering/page.js";
+import { wikilinkToUrl } from "./plugins/wikilinks.js";
 import type { Backlink, Page } from "./src/domain/page.js";
 import type { SiteGraph } from "./src/domain/siteGraph.js";
 import fs from "node:fs";
-import path from "node:path";
 
 function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -27,7 +26,7 @@ function resolveBacklinks(
     .filter((filePath): filePath is string => typeof filePath === "string")
     .map((filePath) => ({
       title: getTitle(filePath),
-      href: withBasePath(`/${path.relative("./content", filePath).replace(/\.md$/, ".html").replace(/\\/g, "/")}`),
+      href: wikilinkToUrl(filePath),
     }));
 }
 

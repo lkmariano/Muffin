@@ -26,7 +26,7 @@ async function extractWikilinkTargets(
     if (!node.data || !node.data.isWikilink) {
       return;
     }
-    const targetSlug = getSlug(node.url.replace(/\.html$/, ".md"));
+    const targetSlug = getSlug(node.url);
     targets.push(targetSlug);
   });
 

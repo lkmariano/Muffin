@@ -23,9 +23,10 @@ Configuration → Content → Transformers → Site Graph → Renderer → Outpu
   or perform direct filesystem operations.
 - **Data isolation:** keep data parsing/page-structure definitions entirely
   separate from HTML generation.
-- **Page model:** everything maps to a structured object with
-  `{ type, title, slug, content, metadata, links }`. Do not pass raw strings
-  between modules. The domain `Page` model lives in `src/domain/page.ts`.
+- **Page model:** everything maps to a structured `Page` object —
+  `{ path, title, metadata, content, backlinks? }`, with
+  `Backlink = { title, href }`. Do not pass raw strings between modules.
+  The domain `Page` model lives in `src/domain/page.ts`.
 - **Registry pattern:** match page types to layouts via a centralized mapper;
   do not write separate hardcoded build functions per page.
 
@@ -65,13 +66,14 @@ For architectural/refactoring plans, return:
 | `./content/*.md` | source vault (nested folders supported) |
 | `./templates/page.html` | HTML shell with `{{PLACEHOLDER}}` tokens |
 | `./templates/styles.css` | global stylesheet using CSS variables |
-| `./public/` | static public assets (copied to output) |
+| `./public/` | reserved for future static assets — currently unused (not copied by `writeStaticAssets()`) |
 | `./src/content/` | file discovery (`loader.ts`) and markdown processing (`markdown.ts`) |
 | `./src/graph/` | backlink graph construction (`backlinks.ts`) |
+| `./src/domain/` | domain models: `Page`, `Backlink`, `PageMetadata`, `SiteGraph`, `ExplorerNode` |
 | `./src/rendering/` | pure HTML generation (`page.ts`) — no `fs` imports |
 | `./src/output/` | file writing (`writer.ts`), static asset copy (`assets.ts`), and template loading (`templates.ts`) |
 | `./src/theme/` | theme config loading from disk (`config.ts`) |
-| `./plugins/` | `wikilinks.ts` (remark plugin), `explorer.ts` (tree + render), `theme.ts` (config → CSS vars) |
+| `./plugins/` | `wikilinks.ts` (target resolution + URL construction), `explorer.ts` (tree + render), `theme.ts` (config → CSS vars) |
 | `./tests/` | vitest unit + integration tests, shared helpers |
 | `./muffin/` | build output (gitignored) |
 | `ARCHITECTURE.md` | architecture source of truth |
@@ -86,9 +88,9 @@ For architectural/refactoring plans, return:
 getMarkdownFiles("./content")              → src/content/loader.ts
   → slugMap (filename → candidate paths; supports duplicate filenames)
   → Pass 1: wikilink extraction → buildSiteGraph (backlinks computed)
-  → Pass 2: renderMarkdownFile → HTML                            → src/content/markdown.ts
+  → Pass 2: renderMarkdown → HTML                              → src/content/markdown.ts
   → buildExplorerTree + renderExplorer                            → plugins/explorer.ts
-  → writePages + writeStaticAssets                                → src/output/writer.ts
+  → writePages + writeStaticAssets                              → src/output/writer.ts + assets.ts
   → ./muffin/ (mirrors folder structure)
 ```
 
@@ -97,6 +99,8 @@ getMarkdownFiles("./content")              → src/content/loader.ts
 - **Slug:** `basename(filename, .md)` lowercased, spaces/underscores → hyphens.
 - **Wikilink resolution:** duplicate filenames resolve same-folder-first, walking
   up the directory tree for precedence (`plugins/wikilinks.ts`).
+- **Homepage:** `projects.html` is copied to `index.html` by `writeStaticAssets()`
+  (`src/output/assets.ts`).
 - **Template tokens:** `{{TITLE}}`, `{{CONTENT}}`, `{{BACKLINKS}}`, `{{NAV}}`,
   `{{CSS}}`, `{{THEME_CSS}}`, `{{PAGE_META}}`.
 

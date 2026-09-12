@@ -5,7 +5,7 @@ import {
   generateThemeCss,
   varsToCssBlock,
   type ThemeConfig,
-} from "../../plugins/theme.js";
+} from "../../src/theme/css.js";
 
 const baseConfig: ThemeConfig = {
   colors: { "text-primary": "#EDE9E6", "surface-base": "#171614" },

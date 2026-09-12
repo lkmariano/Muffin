@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { buildExplorerTree, renderExplorer } from "../../plugins/explorer.js";
+import { buildExplorerTree } from "../../src/graph/navigation.js";
+import { renderExplorer } from "../../src/rendering/explorer.js";
 import { cleanupTempDir, makeTempDir, writeFile } from "../helpers.js";
 
 let dir: string;

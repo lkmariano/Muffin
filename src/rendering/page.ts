@@ -1,4 +1,3 @@
-import { withBasePath } from "../../basePath.js";
 import type { Backlink, PageMetadata } from "../domain/page.js";
 
 export interface RenderablePage {
@@ -12,15 +11,17 @@ export function renderPage(
   page: RenderablePage,
   template: string,
   explorerHtml: string,
+  basePath = "",
 ): string {
+  const basePrefix = basePath.replace(/\/$/, "");
   const listItems = (page.backlinks ?? [])
     .map((link) => `<li><a href="${link.href}">${link.title}</a></li>`)
     .join("");
   const backlinksHtml = listItems
   ? `<div class="aside-title">Backlinks</div><ul>${listItems}</ul>`
   : "";
-  const cssHref = withBasePath("/styles.css");
-  const themeCssHref = withBasePath("/theme.css");
+  const cssHref = `${basePrefix}/styles.css`;
+  const themeCssHref = `${basePrefix}/theme.css`;
 
   const metaParts: string[] = [];
   if (page.metadata.status) {

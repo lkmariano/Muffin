@@ -1,9 +1,8 @@
 import fs from "node:fs";
-import { generateThemeCss } from "../../plugins/theme.js";
-import { loadThemeConfig } from "../theme/config.js";
+import { generateThemeCss } from "../theme/css.js";
+import type { SiteConfig } from "../config/loader.js";
 
-export function writeStaticAssets() {
+export function writeStaticAssets(config: SiteConfig) {
   fs.copyFileSync("./templates/styles.css", "./muffin/styles.css");
-  const themeConfig = loadThemeConfig("./muffin.config.json");
-  fs.writeFileSync("./muffin/theme.css", generateThemeCss(themeConfig), "utf-8");
+  fs.writeFileSync("./muffin/theme.css", generateThemeCss(config.theme), "utf-8");
 }

@@ -1,5 +1,6 @@
 import { formatDate, getSlug, getTitle } from "./util.js";
-import { buildExplorerTree, renderExplorer } from "./plugins/explorer.js";
+import { buildExplorerTree } from "./src/graph/navigation.js";
+import { renderExplorer } from "./src/rendering/explorer.js";
 import { getFileMeta, getMarkdownFiles } from "./src/content/loader.js";
 import { renderMarkdown } from "./src/content/markdown.js";
 import { buildSiteGraph, resolveBacklinks } from "./src/graph/backlinks.js";
@@ -7,14 +8,10 @@ import { writePages } from "./src/output/writer.js";
 import { writeStaticAssets } from "./src/output/assets.js";
 import { loadPageTemplate } from "./src/output/templates.js";
 import { renderPage } from "./src/rendering/page.js";
-import type { Page } from "./src/domain/page.js";
+import { loadConfig } from "./src/config/loader.js";
+import { BASE_PATH } from "./basePath.js";
 import fs from "node:fs";
-
-function loadHomepage(): string | undefined {
-  const raw = fs.readFileSync("./muffin.config.json", "utf-8");
-  const config = JSON.parse(raw) as { homepage?: string };
-  return config.homepage;
-}
+import type { Page } from "./src/domain/page.js";
 
 async function parseFiles() {
   const markdownFiles = await getMarkdownFiles("./content");
@@ -71,15 +68,15 @@ parseFiles()
       return;
     }
     const explorerTree = buildExplorerTree("./content");
-    const explorerHtml = renderExplorer(explorerTree);
+    const explorerHtml = renderExplorer(explorerTree, BASE_PATH);
     const template = loadPageTemplate();
     const outputPages = parsedData.map((page) => ({
       path: page.path,
-      renderedHtml: renderPage(page, template, explorerHtml),
+      renderedHtml: renderPage(page, template, explorerHtml, BASE_PATH),
     }));
-    const homepage = loadHomepage();
-    writePages(outputPages, homepage === undefined ? {} : { homepage });
-    writeStaticAssets();
+    const config = loadConfig("./muffin.config.json");
+    writePages(outputPages, config.homepage === undefined ? {} : { homepage: config.homepage });
+    writeStaticAssets(config);
   })
   .catch((error) => {
     console.error("Build failed:", error);

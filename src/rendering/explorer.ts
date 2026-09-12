@@ -1,14 +1,14 @@
 import type { ExplorerNode } from "../domain/explorer.js";
+import { withBasePath } from "../../basePath.js";
 
 export function renderExplorer(nodes: ExplorerNode[], basePath = ""): string {
   return `<ul>${nodes.map((node) => renderExplorerNode(node, basePath)).join("")}</ul>`;
 }
 
 function renderExplorerNode(node: ExplorerNode, basePath: string): string {
-  const basePrefix = basePath.replace(/\/$/, "");
-
   if (node.type === "file") {
-    return `<li class="explorer-file"><a href="${basePrefix}/${node.href}">${escapeHtml(node.name)}</a></li>`;
+    const href = withBasePath(basePath, `/${node.href}`);
+    return `<li class="explorer-file"><a href="${href}">${escapeHtml(node.name)}</a></li>`;
   }
 
   const children = node.children ?? [];

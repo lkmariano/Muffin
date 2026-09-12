@@ -19,7 +19,11 @@ async function parseFiles() {
 
   const trees: Record<string, Root> = {};
   for (const content of contents) {
-    trees[content.path] = await parseMarkdown(content.body, slugMap, content.path);
+    trees[content.path] = await parseMarkdown(
+      content.body,
+      slugMap,
+      content.relPath,
+    );
   }
 
   const graph = await buildSiteGraph(
@@ -38,8 +42,8 @@ async function parseFiles() {
         ...(typeof statusValue === "string" ? { status: statusValue } : {}),
         updated: formatDate(content.mtime),
       },
-      content: await renderMarkdownTree(trees[content.path]!),
-      backlinks: resolveBacklinks(graph, slug, slugMap),
+      content: await renderMarkdownTree(trees[content.path]!, BASE_PATH),
+      backlinks: resolveBacklinks(graph, slug, slugMap, BASE_PATH),
     });
   }
 

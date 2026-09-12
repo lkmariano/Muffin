@@ -41,12 +41,6 @@ export async function loadContent(directory: string): Promise<LoadedContentResul
   const contents: LoadedContent[] = markdownFiles.map((file) => {
     const slug = getSlug(file);
 
-    if (!slugMap[slug]) {
-      slugMap[slug] = [];
-    }
-
-    slugMap[slug].push(file);
-
     const relPath = path.relative(directory, file);
     const firstSegment = relPath.split(path.sep)[0];
     if (
@@ -59,6 +53,12 @@ export async function loadContent(directory: string): Promise<LoadedContentResul
         `Cannot derive a valid relative path for "${file}" from content root "${directory}".`,
       );
     }
+
+    if (!slugMap[slug]) {
+      slugMap[slug] = [];
+    }
+
+    slugMap[slug].push(relPath);
 
     const raw = fs.readFileSync(file, "utf-8");
     const { data, content } = matter(raw);

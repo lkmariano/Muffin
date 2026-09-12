@@ -1,4 +1,4 @@
-import { getSlug, getTitle } from "../../util.js";
+import { getSlug, getTitle, toHtmlPath } from "../../util.js";
 import type { LoadedContent } from "../content/loader.js";
 import type { ExplorerNode } from "../domain/explorer.js";
 
@@ -43,7 +43,7 @@ function buildDirectory(relPaths: string[], folderPath: string): ExplorerNode[] 
       return {
         name: getTitle(name),
         slug: getSlug(name),
-        href: fullPath.replace(/\.md$/, ".html").replace(/\\/g, "/"),
+        href: toHtmlPath(fullPath),
         path: fullPath,
         type: "file",
       } as ExplorerNode;

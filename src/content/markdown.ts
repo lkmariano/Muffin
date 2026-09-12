@@ -22,8 +22,8 @@ export async function parseMarkdown(
   return parser.run(tree) as Promise<Root>;
 }
 
-export async function renderMarkdownTree(tree: Root): Promise<string> {
-  const renderer = unified().use(wikilinkToUrlPlugin).use(remarkRehype).use(rehypeStringify);
+export async function renderMarkdownTree(tree: Root, basePath = ""): Promise<string> {
+  const renderer = unified().use(wikilinkToUrlPlugin, basePath).use(remarkRehype).use(rehypeStringify);
 
   const hast = await renderer.run(tree);
   return String(renderer.stringify(hast));
@@ -33,6 +33,7 @@ export async function renderMarkdown(
   body: string,
   slugMap: Record<string, string[]>,
   currentFile: string,
+  basePath = "",
 ): Promise<string> {
-  return renderMarkdownTree(await parseMarkdown(body, slugMap, currentFile));
+  return renderMarkdownTree(await parseMarkdown(body, slugMap, currentFile), basePath);
 }

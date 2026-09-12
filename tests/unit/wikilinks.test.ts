@@ -32,26 +32,30 @@ describe("resolveWikilink", () => {
 });
 
 describe("wikilinkToUrl", () => {
-  it("converts a content file path to a site-relative output URL", () => {
-    expect(wikilinkToUrl("content/a.md")).toBe("/a.html");
+  it("converts a relPath to a site-relative output URL", () => {
+    expect(wikilinkToUrl("a.md", "")).toBe("/a.html");
   });
 
   it("preserves the folder structure for nested files", () => {
-    expect(wikilinkToUrl("content/projects/deep note.md")).toBe("/projects/deep note.html");
+    expect(wikilinkToUrl("projects/deep note.md", "")).toBe("/projects/deep note.html");
+  });
+
+  it("applies an explicit base path", () => {
+    expect(wikilinkToUrl("a.md", "/Muffin")).toBe("/Muffin/a.html");
   });
 });
 
 describe("wikilinkToUrlPlugin", () => {
-  it("converts only wikilink link urls from file paths to output URLs", () => {
+  it("converts only wikilink link urls from relPaths to output URLs", () => {
     const tree: any = {
       type: "root",
       children: [
-        { type: "link", url: "content/a.md", data: { isWikilink: true }, children: [] },
+        { type: "link", url: "a.md", data: { isWikilink: true }, children: [] },
         { type: "link", url: "https://example.com", children: [] },
       ],
     };
 
-    wikilinkToUrlPlugin()(tree);
+    wikilinkToUrlPlugin("")(tree);
 
     expect(tree.children[0].url).toBe("/a.html");
     expect(tree.children[1].url).toBe("https://example.com");

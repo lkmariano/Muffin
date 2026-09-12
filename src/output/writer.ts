@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { toHtmlPath } from "../../util.js";
 
 export interface OutputPage {
   path: string;
@@ -18,7 +19,7 @@ export function writePages(pages: OutputPage[], options: WritePagesOptions = {})
 
   for (const page of pages) {
     const relativePath = path.relative(contentRoot, page.path);
-    const outputPath = path.join(outputRoot, relativePath.replace(/\.md$/, ".html"));
+    const outputPath = path.join(outputRoot, toHtmlPath(relativePath));
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
     fs.writeFileSync(outputPath, page.renderedHtml, "utf-8");
   }

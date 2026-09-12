@@ -1,7 +1,7 @@
 import { findAndReplace } from 'mdast-util-find-and-replace'
 import path from 'node:path';
 import { visit } from 'unist-util-visit';
-import { getTitle } from '../util.js';
+import { getTitle, toHtmlPath } from '../util.js';
 import { withBasePath } from '../basePath.js';
 
 export function wikilinkPlugin(slugsMap: Record<string, string[]>, currentFile: string): (tree: any) => void {
@@ -33,18 +33,17 @@ export function wikilinkPlugin(slugsMap: Record<string, string[]>, currentFile: 
   };
 }
 
-export function wikilinkToUrl(filePath: string): string {
-  const relativePath = path.relative("./content", filePath).replace(/\.md$/, ".html").replace(/\\/g, "/");
-  return withBasePath(`/${relativePath}`);
+export function wikilinkToUrl(relPath: string, basePath: string): string {
+  return withBasePath(basePath, `/${toHtmlPath(relPath)}`);
 }
 
-export function wikilinkToUrlPlugin(): (tree: any) => void {
+export function wikilinkToUrlPlugin(basePath: string): (tree: any) => void {
   return (tree: any): void => {
     visit(tree, "link", (node: any) => {
       if (!node.data || !node.data.isWikilink) {
         return;
       }
-      node.url = wikilinkToUrl(node.url);
+      node.url = wikilinkToUrl(node.url, basePath);
     });
   };
 }

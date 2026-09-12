@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getSlug, getTitle } from "../../util.js";
+import { getSlug, getTitle, toHtmlPath } from "../../util.js";
 
 describe("getSlug", () => {
   it("lowercases the filename", () => {
@@ -23,5 +23,15 @@ describe("getSlug", () => {
 describe("getTitle", () => {
   it("returns the basename without the .md extension", () => {
     expect(getTitle("notes/Projects/My Note.md")).toBe("My Note");
+  });
+});
+
+describe("toHtmlPath", () => {
+  it("swaps .md for .html", () => {
+    expect(toHtmlPath("notes/Deep Note.md")).toBe("notes/Deep Note.html");
+  });
+
+  it("normalizes backslashes to forward slashes", () => {
+    expect(toHtmlPath("notes\\Deep Note.md")).toBe("notes/Deep Note.html");
   });
 });

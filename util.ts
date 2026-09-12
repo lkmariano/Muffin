@@ -12,3 +12,7 @@ export function getTitle(filePath: string): string {
 export function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
+
+export function toHtmlPath(relPath: string): string {
+  return relPath.replace(/\\/g, "/").replace(/\.md$/, ".html");
+}

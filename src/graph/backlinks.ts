@@ -44,12 +44,13 @@ export function resolveBacklinks(
   graph: SiteGraph,
   slug: string,
   slugMap: Record<string, string[]>,
+  basePath = "",
 ): Backlink[] {
   return (graph.backlinks[slug] ?? [])
     .map((sourceSlug) => slugMap[sourceSlug]?.[0])
     .filter((filePath): filePath is string => typeof filePath === "string")
     .map((filePath) => ({
       title: getTitle(filePath),
-      href: wikilinkToUrl(filePath),
+      href: wikilinkToUrl(filePath, basePath),
     }));
 }

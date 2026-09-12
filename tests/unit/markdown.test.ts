@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import fs from "node:fs";
+import path from "node:path";
 import { parseMarkdown, renderMarkdown, renderMarkdownTree } from "../../src/content/markdown.js";
 import { cleanupTempDir, makeTempDir, writeFile } from "../helpers.js";
 
@@ -19,12 +20,12 @@ describe("parseMarkdown + renderMarkdownTree", () => {
     const source = writeFile(dir, "source.md", "See [[Target Note|custom label]]");
     const body = fs.readFileSync(source, "utf-8");
 
-    const slugMap = { "target-note": [target] };
+    const slugMap = { "target-note": [path.relative(dir, target)] };
 
-    const tree = await parseMarkdown(body, slugMap, source);
+    const tree = await parseMarkdown(body, slugMap, path.relative(dir, source));
     const html = await renderMarkdownTree(tree);
 
-    expect(html).toEqual(await renderMarkdown(body, slugMap, source));
+    expect(html).toEqual(await renderMarkdown(body, slugMap, path.relative(dir, source)));
     expect(html).toContain("<p>See ");
     expect(html).toContain(">custom label</a>");
     expect(html).toContain("Target%20Note.html");
@@ -36,7 +37,7 @@ describe("renderMarkdown", () => {
     const file = writeFile(dir, "note.md", "# Heading\n\nSome **bold** text.");
     const body = fs.readFileSync(file, "utf-8");
 
-    const html = await renderMarkdown(body, {}, file);
+    const html = await renderMarkdown(body, {}, path.relative(dir, file));
 
     expect(html).toContain("<h1>Heading</h1>");
     expect(html).toContain("<strong>bold</strong>");
@@ -47,8 +48,8 @@ describe("renderMarkdown", () => {
     const source = writeFile(dir, "source.md", "See [[Target Note|custom label]]");
     const body = fs.readFileSync(source, "utf-8");
 
-    const slugMap = { "target-note": [target] };
-    const html = await renderMarkdown(body, slugMap, source);
+    const slugMap = { "target-note": [path.relative(dir, target)] };
+    const html = await renderMarkdown(body, slugMap, path.relative(dir, source));
 
     expect(html).toContain("<p>See ");
     expect(html).toContain(">custom label</a>");
@@ -59,7 +60,7 @@ describe("renderMarkdown", () => {
     const source = writeFile(dir, "source.md", "See [[Missing Note]]");
     const body = fs.readFileSync(source, "utf-8");
 
-    const html = await renderMarkdown(body, {}, source);
+    const html = await renderMarkdown(body, {}, path.relative(dir, source));
 
     expect(html).toContain("See Missing Note");
     expect(html).not.toContain("<a");

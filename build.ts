@@ -16,6 +16,12 @@ function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+function loadHomepage(): string | undefined {
+  const raw = fs.readFileSync("./muffin.config.json", "utf-8");
+  const config = JSON.parse(raw) as { homepage?: string };
+  return config.homepage;
+}
+
 function resolveBacklinks(
   graph: SiteGraph,
   slug: string,
@@ -91,7 +97,8 @@ parseFiles()
       path: page.path,
       renderedHtml: renderPage(page, template, explorerHtml),
     }));
-    writePages(outputPages);
+    const homepage = loadHomepage();
+    writePages(outputPages, homepage === undefined ? {} : { homepage });
     writeStaticAssets();
   })
   .catch((error) => {

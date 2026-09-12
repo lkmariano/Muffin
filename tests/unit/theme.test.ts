@@ -22,6 +22,15 @@ describe("flattenConfigToVars", () => {
     expect(vars["fonts-body"]).toBe("'Lora', Georgia, serif");
     expect(vars["layout-nav-width"]).toBe("400px");
   });
+
+  it("ignores non-theme keys", () => {
+    const vars = flattenConfigToVars({
+      ...baseConfig,
+      homepage: "projects",
+    } as ThemeConfig);
+    expect(vars["homepage-projects"]).toBeUndefined();
+    expect(vars["colors-text-primary"]).toBe("#EDE9E6");
+  });
 });
 
 describe("varsToCssBlock", () => {

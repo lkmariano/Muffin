@@ -8,10 +8,15 @@ export type ThemeConfig = {
 
 export type ThemeVars = Record<string, string>;
 
+const THEME_GROUPS = new Set(["colors", "fonts", "font-sizes", "spacing", "layout"]);
+
 export function flattenConfigToVars(config: ThemeConfig): ThemeVars {
   const vars: ThemeVars = {};
 
   for (const [groupKey, group] of Object.entries(config)) {
+    if (!THEME_GROUPS.has(groupKey)) {
+      continue;
+    }
     for (const [innerKey, value] of Object.entries(group)) {
       vars[`${groupKey}-${innerKey}`] = value;
     }

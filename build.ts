@@ -1,8 +1,8 @@
 import { formatDate, getSlug, getTitle } from "./util.js";
 import { buildExplorerTree } from "./src/graph/navigation.js";
 import { renderExplorer } from "./src/rendering/explorer.js";
-import { getFileMeta, getMarkdownFiles } from "./src/content/loader.js";
-import { renderMarkdown } from "./src/content/markdown.js";
+import { loadContent } from "./src/content/loader.js";
+import { parseMarkdown, renderMarkdownTree } from "./src/content/markdown.js";
 import { buildSiteGraph, resolveBacklinks } from "./src/graph/backlinks.js";
 import { writePages } from "./src/output/writer.js";
 import { writeStaticAssets } from "./src/output/assets.js";
@@ -10,49 +10,35 @@ import { loadPageTemplate } from "./src/output/templates.js";
 import { renderPage } from "./src/rendering/page.js";
 import { loadConfig } from "./src/config/loader.js";
 import { BASE_PATH } from "./basePath.js";
-import fs from "node:fs";
 import type { Page } from "./src/domain/page.js";
+import type { Root } from "mdast";
 
 async function parseFiles() {
-  const markdownFiles = await getMarkdownFiles("./content");
+  const { contents, slugMap } = await loadContent("./content");
   const parsedData: Page[] = [];
 
-  const slugMap: Record<string, string[]> = {};
-
-  for (const file of markdownFiles) {
-    const slug = getSlug(file);
-
-    if (!slugMap[slug]) {
-      slugMap[slug] = [];
-    }
-
-    slugMap[slug].push(file);
+  const trees: Record<string, Root> = {};
+  for (const content of contents) {
+    trees[content.path] = await parseMarkdown(content.body, slugMap, content.path);
   }
 
-  const contentMap = new Map<string, string>();
-  for (const file of markdownFiles) {
-    contentMap.set(file, fs.readFileSync(file, "utf-8"));
-  }
+  const graph = await buildSiteGraph(
+    contents.map((content) => ({ path: content.path, tree: trees[content.path]! })),
+  );
 
-  const graph = await buildSiteGraph(contentMap, slugMap);
-
-  for (const file of markdownFiles) {
-    const rawContent = contentMap.get(file)!;
-    const { html, frontmatter } = await renderMarkdown(rawContent, slugMap, file);
-    const { mtime } = await getFileMeta(file);
-
-    const slug = getSlug(file);
-    const statusValue = frontmatter.status;
+  for (const content of contents) {
+    const slug = getSlug(content.path);
+    const statusValue = content.frontmatter.status;
 
     parsedData.push({
-      path: file,
-      title: getTitle(file),
+      path: content.path,
+      title: getTitle(content.path),
       metadata: {
-        frontmatter,
+        frontmatter: content.frontmatter,
         ...(typeof statusValue === "string" ? { status: statusValue } : {}),
-        updated: formatDate(mtime),
+        updated: formatDate(content.mtime),
       },
-      content: html,
+      content: await renderMarkdownTree(trees[content.path]!),
       backlinks: resolveBacklinks(graph, slug, slugMap),
     });
   }

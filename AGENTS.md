@@ -3,6 +3,9 @@
 A barebones static site generator for Obsidian vaults (markdown → HTML) built in
 Node.js + TypeScript. Single entrypoint: `build.ts`.
 
+This file describes the current codebase — structure, commands, and conventions.
+The design philosophy and architectural direction live in `ARCHITECTURE.md`.
+
 ## Build & Verify
 
 - **Build command:** `npx tsx build.ts` (tsx runs TS directly — no compile step)
@@ -30,17 +33,20 @@ Configuration → Content → Transformers → Site Graph → Renderer → Outpu
 - **Registry pattern:** match page types to layouts via a centralized mapper;
   do not write separate hardcoded build functions per page.
 
+  (These rules follow the principles in `ARCHITECTURE.md` §1.)
+
 ## Architecture Reference
 
-`ARCHITECTURE.md` is the architectural source of truth.
+`ARCHITECTURE.md` is Muffin's design philosophy and architectural direction — it
+describes principles, not the current code (AGENTS.md documents the current state).
 
-Read it only when:
-- planning or implementing an architectural/refactoring change
+Consult it when planning:
+- an architectural/refactoring change
 - adding or changing module boundaries
 - changing dependency direction
 - introducing a new page type, pipeline stage, or shared domain model
 
-Do not read it for routine bug fixes, small local changes, or unrelated tasks.
+Skip it for routine bug fixes, small local changes, or unrelated tasks.
 
 ## Planning Output
 
@@ -67,40 +73,58 @@ For architectural/refactoring plans, return:
 | `./templates/page.html` | HTML shell with `{{PLACEHOLDER}}` tokens |
 | `./templates/styles.css` | global stylesheet using CSS variables |
 | `./public/` | reserved for future static assets — currently unused (not copied by `writeStaticAssets()`) |
+| `./src/config/` | site config loading from disk (`loader.ts` → `SiteConfig` with optional `homepage`) |
 | `./src/content/` | file discovery (`loader.ts`) and markdown processing (`markdown.ts`) |
-| `./src/graph/` | backlink graph construction (`backlinks.ts`) |
-| `./src/domain/` | domain models: `Page`, `Backlink`, `PageMetadata`, `SiteGraph`, `ExplorerNode` |
-| `./src/rendering/` | pure HTML generation (`page.ts`) — no `fs` imports |
-| `./src/output/` | file writing (`writer.ts`), static asset copy (`assets.ts`), and template loading (`templates.ts`) |
-| `./src/theme/` | theme config loading from disk (`config.ts`) |
-| `./plugins/` | `wikilinks.ts` (target resolution + URL construction), `explorer.ts` (tree + render), `theme.ts` (config → CSS vars) |
+| `./src/graph/` | backlink graph (`backlinks.ts`) + explorer tree (`navigation.ts`) |
+| `./src/domain/` | models: `page.ts` (`Page`, `Backlink`, `PageMetadata`), `siteGraph.ts` (`SiteGraph`), `explorer.ts` (`ExplorerNode`) |
+| `./src/rendering/` | pure HTML generation — `page.ts`, `explorer.ts` — no `fs` imports |
+| `./src/output/` | file writing (`writer.ts`), static assets + theme.css (`assets.ts`), template loading (`templates.ts`) |
+| `./src/theme/` | theme config → CSS (`css.ts`) — pure functions, no `fs` |
+| `./plugins/` | `wikilinks.ts` only (target resolution + URL construction) |
 | `./tests/` | vitest unit + integration tests, shared helpers |
 | `./muffin/` | build output (gitignored) |
-| `ARCHITECTURE.md` | architecture source of truth |
-| `muffin.config.json` | theme tokens (colors, fonts, spacing, layout) |
+| `ARCHITECTURE.md` | design philosophy + architectural direction — not current-state documentation |
+| `muffin.config.json` | theme tokens (colors, fonts, spacing, layout) + `homepage` |
 | `basePath.ts` | `withBasePath()` — URL prefixing via `MUFFIN_BASE_PATH` |
-| `util.ts` | slug/title helpers (`getSlug`, `getTitle`) |
+| `util.ts` | slug/title/date helpers (`getSlug`, `getTitle`, `formatDate`) |
 | `vitest.config.ts` | vitest configuration |
+
+## Tests
+
+`npm test` (vitest run). Unit specs mirror the pipeline modules; integration
+tests run the pipeline end-to-end on temp dirs via `tests/helpers.ts`
+(`makeTempDir`/`writeFile`/`cleanupTempDir`).
+
+- `tests/unit/` — `markdown`, `wikilinks`, `backlinks`, `explorer`, `theme`,
+  `writer`, `page-renderer`, `util`, `basePath`
+- `tests/integration/` — `pipeline` (discovery → graph → render)
 
 ## Pipeline Flow
 
 ```
 getMarkdownFiles("./content")              → src/content/loader.ts
   → slugMap (filename → candidate paths; supports duplicate filenames)
-  → Pass 1: wikilink extraction → buildSiteGraph (backlinks computed)
-  → Pass 2: renderMarkdown → HTML                              → src/content/markdown.ts
-  → buildExplorerTree + renderExplorer                            → plugins/explorer.ts
-  → writePages + writeStaticAssets                              → src/output/writer.ts + assets.ts
+  → parseMarkdown: body → mdast (remarkParse + wikilink plugin) once per file → src/content/markdown.ts
+  → buildSiteGraph (forward/back links) from the parsed ASTs     → src/graph/backlinks.ts
+  → renderMarkdownTree → HTML (from the same parsed ASTs)       → src/content/markdown.ts
+  → buildExplorerTree → ExplorerNode[]                          → src/graph/navigation.ts
+  → renderExplorer → NAV html                                  → src/rendering/explorer.ts
+  → loadConfig("./muffin.config.json")                         → src/config/loader.ts
+  → writePages + writeStaticAssets (theme.css via css.ts)      → src/output/writer.ts + assets.ts
   → ./muffin/ (mirrors folder structure)
 ```
 
-- **Known inefficiency:** every file is parsed twice (once for link extraction,
-  once for HTML). Not yet fixed.
+- **Single parse:** each markdown body is parsed into an mdast tree exactly once
+  (`parseMarkdown`, which also resolves wikilinks). Graph construction only
+  inspects the shared trees; rendering only hastifies them (`renderMarkdownTree`).
 - **Slug:** `basename(filename, .md)` lowercased, spaces/underscores → hyphens.
 - **Wikilink resolution:** duplicate filenames resolve same-folder-first, walking
   up the directory tree for precedence (`plugins/wikilinks.ts`).
-- **Homepage:** `projects.html` is copied to `index.html` by `writeStaticAssets()`
-  (`src/output/assets.ts`).
+- **Homepage:** `muffin.config.json`'s `homepage` field names the source page
+  (by basename) aliased to `index.html`; handled in `writePages()`
+  (`src/output/writer.ts`). `writeStaticAssets()` only copies `styles.css` and
+  writes `theme.css` from the theme config (`src/output/assets.ts` +
+  `src/theme/css.ts`).
 - **Template tokens:** `{{TITLE}}`, `{{CONTENT}}`, `{{BACKLINKS}}`, `{{NAV}}`,
   `{{CSS}}`, `{{THEME_CSS}}`, `{{PAGE_META}}`.
 
@@ -108,17 +132,4 @@ getMarkdownFiles("./content")              → src/content/loader.ts
 
 `.github/workflows/deploy.yaml` builds and deploys to GitHub Pages on push to
 `main`, with `MUFFIN_BASE_PATH: /Muffin` set in CI.
-
-## Current Work: Phase 5 — Content Processing Pipeline
-
-Phase 5 is complete. The content processing pipeline has clean boundaries:
-
-- **`src/content/markdown.ts`** — frontmatter extraction + MD→HTML transformation (coherent single responsibility)
-- **`src/content/loader.ts`** — file discovery + file stat metadata
-- **`plugins/wikilinks.ts`** — remark plugin for wikilink resolution
-- **`src/graph/backlinks.ts`** — site graph construction (forward/back links)
-
-`build.ts` is a thin orchestrator (slug map, contentMap, graph, Page assembly, render, output).
-
-No further content-layer refactoring is justified at the current scale.
 

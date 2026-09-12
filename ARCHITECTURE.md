@@ -1,602 +1,336 @@
-# ARCHITECTURE.md — Muffin
+# Muffin Architecture
 
-This document is the architectural source of truth for Muffin.
+This document describes the **architectural direction and design philosophy** Muffin should follow as it evolves.
 
-Muffin is a lightweight static site generator for Obsidian vaults built with Node.js and TypeScript.
+It is a set of guiding principles, not a description of the current codebase. The actual implementation and file structure are documented separately.
 
-The goal is to keep Muffin modular, easy to understand, easy to test, and easy to extend without introducing unnecessary complexity.
+The goal is not to build a highly abstract system. The goal is to keep Muffin understandable, modular, and easy to extend as it grows.
 
-# 1. Architecture Principles
+---
 
-## Keep responsibilities separate
+## 1. Architecture Principles
 
-Each module should have one clear responsibility.
+### Keep responsibilities separate
 
-Prefer small modules, simple functions, and typed data.
+Each part of Muffin should have a clear responsibility.
 
-Avoid large utility modules, hidden dependencies, and unnecessary abstractions.
+Content processing, transformation, graph construction, rendering, configuration, and output should not become mixed together simply because doing so is convenient in the short term.
 
-## Use a one-way pipeline
+A module should generally have one reason to change.
 
-Muffin follows this general flow:
+### Prefer a clear flow of data
 
-Configuration → Content → Transformers → Site Graph → Rendering → Output
+Muffin should generally move information through a predictable sequence:
 
-A later stage should consume the results of an earlier stage instead of reaching backward and doing its work.
-
-## Keep build.ts thin
-
-`build.ts` is the composition root.
-
-It should coordinate the build but should not contain the implementation of each stage.
-
-Conceptually:
-
+```text
 Configuration
-→ Content
-→ Markdown
-→ Graph
-→ Rendering
-→ Output
-
-## Separate data from presentation
-
-Page data and HTML should be separate.
-
-The general flow is:
-
-Markdown → Page → Renderer → HTML
-
-The renderer should not parse Markdown, discover files, or calculate backlinks.
-
-## Keep infrastructure separate
-
-Filesystem operations, templates, environment variables, and output writing are infrastructure concerns.
-
-Domain and application logic should not directly depend on these details.
-
-For example, rendering code should not import `fs`.
-
-## Keep configuration in one place
-
-Things such as the base path, theme, fonts, colors, layout, homepage, and enabled features should come from configuration where practical.
-
-Modules should not independently read environment variables or configuration files when configuration can be passed to them.
-
-## Prefer composition over modification
-
-Adding new functionality should not require repeatedly changing `build.ts`.
-
-For example, adding a new page type should mainly involve creating and registering a renderer.
-
-## Keep Muffin small
-
-Muffin should use useful architectural ideas from larger static site generators such as Quartz without copying their complexity.
-
-Prefer:
-
-Simple + Modular + Testable
-
-over:
-
-Abstract + Generic + Complex
-
-# 2. Target Structure
-
-The intended application structure is:
-
-```text
-src/
-├── domain/
-│   ├── page.ts
-│   ├── link.ts
-│   ├── metadata.ts
-│   ├── explorer.ts
-│   └── siteGraph.ts
-│
-├── content/
-│   ├── loader.ts
-│   ├── markdown.ts
-│   ├── wikilinks.ts
-│   └── transformers/
-│
-├── graph/
-│   ├── backlinks.ts
-│   └── navigation.ts
-│
-├── pages/
-│   ├── registry.ts
-│   ├── default/
-│   ├── portfolio/
-│   ├── photo/
-│   └── note/
-│
-├── rendering/
-│   ├── page.ts
-│   ├── explorer.ts
-│   └── backlinks.ts
-│
-├── theme/
-│   ├── loader.ts
-│   ├── tokens.ts
-│   └── css.ts
-│
-├── config/
-│   ├── schema.ts
-│   └── loader.ts
-│
-└── infrastructure/
-    ├── filesystem.ts
-    ├── templates.ts
-    └── assets.ts
-
-build.ts
-```
-
-Not all of these modules need to exist immediately.
-
-Create modules as responsibilities are extracted.
-
-# 3. Main Data Flow
-
-The target flow is:
-
-```text
-Obsidian Markdown
-      ↓
-ContentLoader
-      ↓
-MarkdownProcessor
-      ↓
-Page
-      ↓
-SiteGraph
-      ↓
-Page Renderer
-      ↓
-HTML
-      ↓
+     ↓
+Content
+     ↓
+Transformations
+     ↓
+Site Graph
+     ↓
+Rendering
+     ↓
 Output
 ```
 
-Configuration, theme, URLs, and infrastructure support these stages.
+Not every feature needs to pass through every stage, but responsibilities should generally follow this direction rather than reaching backward into earlier stages.
 
-# 4. Module Responsibilities
+### Keep orchestration thin
 
-## Configuration
+The build process should primarily coordinate the system.
 
-Responsible for:
+The composition root may assemble configuration, content processing, graph construction, rendering, and output, but the underlying behavior should live in the components responsible for it.
 
-* Loading configuration
-* Validating configuration
-* Providing normalized configuration
+The build process should remain understandable even as Muffin gains capabilities.
 
-Configuration may contain:
+### Separate data from presentation
 
-* Theme
-* Base path
-* Fonts
-* Colors
-* Layout
-* Homepage
-* Features
+Muffin should distinguish between:
 
-Load configuration once and pass it through the pipeline.
-
-## Content Loader
-
-Location:
-
-`src/content/loader.ts`
-
-Responsible for discovering Markdown files.
-
-It should not:
-
-* Render HTML
-* Calculate backlinks
-* Write output
-
-## Markdown Processor
-
-Location:
-
-`src/content/markdown.ts`
-
-Responsible for Markdown processing.
-
-This includes:
-
-* Markdown parsing
-* Frontmatter
-* Remark/Rehype configuration
-* Wikilinks
-* Other Markdown transformations
-
-Markdown processing should not contain page layout or output-writing logic.
-
-## Domain
-
-Location:
-
-`src/domain/`
-
-Contains the core data structures used by Muffin.
-
-The domain should define the data passed between pipeline stages without depending on filesystem, HTML, or output details.
-
-Core types include:
-
-* `Page`
-* `PageMetadata`
-* `Link`
-* `ExplorerNode`
-* `SiteGraph`
-* `BuildContext`
-* `RenderContext`
-
-Example:
-
-```ts
-type PageType =
-  | "default"
-  | "portfolio"
-  | "photo"
-  | "note";
-
-interface Page {
-  id: string;
-  type: PageType;
-  title: string;
-  slug: string;
-  content: string;
-  metadata: PageMetadata;
-  links: Link[];
-  backlinks: Link[];
-}
+```text
+source content
+     ↓
+structured data
+     ↓
+presentation
+     ↓
+generated output
 ```
 
-`BuildContext` contains state shared across build stages.
+Rendering should consume information that has already been interpreted and prepared.
 
-`RenderContext` contains the data required to render a page.
+Presentation code should not become responsible for discovering files, parsing source content, calculating backlinks, or performing unrelated application logic.
 
-These contexts should be passed explicitly between functions rather than stored in global state.
+### Keep the core independent of the environment
 
-Domain types should not depend on:
+Core concepts should not depend directly on filesystem details, deployment environments, HTML templates, or other environment-specific concerns.
 
-* `fs`
+Infrastructure should exist at the edges of the system.
+
+This makes individual parts easier to understand, test, replace, and reuse.
+
+---
+
+## 2. Content
+
+Content loading should form the boundary between Muffin and its source material.
+
+The source may contain Markdown or other supported formats in the future, but downstream parts of Muffin should not need to know how that source was obtained.
+
+Content processing should be responsible for interpreting source material and producing information that the rest of the system can work with.
+
+It should not become responsible for rendering pages or writing generated output.
+
+---
+
+## 3. Transformations
+
+Transformations should modify or enrich content in well-defined stages.
+
+Examples may include:
+
+* parsing frontmatter
+* resolving wikilinks
+* processing Markdown
+* interpreting other source constructs
+* enriching content with derived information
+
+Transformations should remain composable where useful.
+
+Muffin should not introduce a formal abstraction or pipeline framework merely for the sake of having one. The complexity of the transformation system should match the complexity of the features it supports.
+
+---
+
+## 4. Domain Model
+
+Muffin should have clear representations for the concepts that make up a site.
+
+Examples include:
+
+* pages
+* metadata
+* links
+* navigation
+* explorer structures
+* site graphs
+
+These concepts should represent Muffin's information rather than the mechanics used to store or display that information.
+
+The domain should avoid direct dependencies on:
+
+* filesystem operations
 * HTML
 * CSS
-* Templates
-* Deployment
-* Output paths
+* templates
+* deployment details
+* output mechanisms
 
-## Site Graph
+The exact shape of these models may change as Muffin develops.
 
-Location:
+---
 
-`src/graph/`
+## 5. Site Graph
 
-Responsible for relationships between pages.
+Relationships between content should be represented independently from presentation.
 
-This includes:
+The site graph may contain information such as:
 
-* Links
-* Backlinks
-* Navigation
-* Explorer structure
+* forward links
+* backlinks
+* relationships between pages
+* navigation relationships
+* other derived site structure
 
-Graph logic should not generate HTML.
+Graph construction should operate on content and domain data rather than generating HTML.
 
-## Explorer
+This allows relationships to be tested and reasoned about independently from how they are eventually displayed.
 
-Explorer construction and Explorer rendering are separate.
+---
 
-Explorer construction creates the data:
+## 6. Navigation and Exploration
 
-`ExplorerNode[]`
+Navigation and explorer structures should represent the site's organization separately from their visual presentation.
 
-Explorer rendering turns that data into HTML.
+Construction of the structure and rendering of that structure are different responsibilities.
 
-This means Explorer logic can be tested without HTML rendering.
+The same underlying information should be capable of supporting different presentations without requiring the graph or domain model to know about HTML.
 
-# 5. Page Types
+---
 
-Page types are a first-class concept.
+## 7. Page Types
 
-Initial types may include:
+Muffin may eventually support different kinds of pages.
 
-* `default`
-* `portfolio`
-* `photo`
-* `note`
+When this becomes necessary, page types should be treated as an extension of the site's domain rather than as unrelated special cases scattered throughout the build process.
 
-All page types use the same core `Page` model.
+Adding a page type should not require modifying unrelated parts of content loading, graph construction, or output.
 
-Page type and layout should remain separate.
+At the same time, page types should only be introduced when they provide a meaningful distinction. Muffin should not create abstractions for hypothetical use cases.
 
-For example:
+---
 
-```text
-type = photo
-layout = gallery
-```
+## 8. Rendering
 
-A page type describes what the page represents.
+Rendering is the boundary between Muffin's structured information and its presentation.
 
-A layout describes how it is presented.
+Renderers should primarily transform prepared data into output.
 
-# 6. Renderer Registry
+They may depend on things such as:
 
-Page types should use a centralized renderer registry.
-
-Conceptually:
-
-```ts
-const renderers = {
-  default: renderDefaultPage,
-  portfolio: renderPortfolioPage,
-  photo: renderPhotoPage,
-  note: renderNotePage,
-};
-```
-
-The build pipeline should not contain separate hardcoded build functions for every page type.
-
-Adding a page type should mainly involve:
-
-1. Defining the type
-2. Creating its renderer
-3. Registering the renderer
-
-`build.ts` should not need to change.
-
-Initially, only the default renderer needs to exist.
-
-# 7. Markdown Transformers
-
-Markdown processing should eventually use an ordered transformer pipeline.
-
-For example:
-
-```text
-Markdown
-  ↓
-Wikilinks
-  ↓
-Frontmatter
-  ↓
-Other Transformers
-  ↓
-Processed Content
-```
-
-Transformers should be independently understandable and testable.
-
-Use a consistent transformer interface:
-
-```ts
-interface MarkdownTransformer {
-  transform(input: MarkdownInput): MarkdownOutput;
-}
-```
-
-Each transformer should accept the output of the previous transformer and return the transformed result.
-
-The interface may be extended when the existing implementation requires additional context, but individual transformers should not introduce unrelated responsibilities.
-
-# 8. Rendering
-
-Location:
-
-`src/rendering/`
-
-Rendering converts structured data into HTML.
-
-Rendering can use:
-
-* Page data
-* Site graph data
-* Configuration
-* Theme data
+* page data
+* graph information
+* configuration
+* theme information
 * URL information
-* Templates
+* templates
 
-Rendering should not:
+They should not be responsible for:
 
-* Discover Markdown files
-* Parse source files
-* Calculate backlinks
-* Write output files
-* Import `fs`
+* discovering source files
+* reading source content
+* calculating backlinks
+* performing application-level analysis
+* writing files
 
-# 9. Theme
+Rendering should remain replaceable without requiring changes to the underlying content model.
 
-Location:
+---
 
-`src/theme/`
+## 9. Theme and Presentation
 
-Theme responsibilities should be separated into:
+Theme configuration should remain separate from the content and domain model.
 
-```text
-Theme Configuration
-      ↓
-Tokens
-      ↓
-CSS
-      ↓
-Assets
-```
+Styling decisions, visual tokens, CSS generation, and presentation-specific configuration should not leak into core content processing.
 
-Theme changes should not require changes to content processing.
+Changing the appearance of a site should not require changing how Muffin understands the site's content.
 
-# 10. URLs
+---
 
-URL and base-path handling should be isolated.
+## 10. URLs
 
-For example:
+URL construction should be treated as a separate concern from content processing.
 
-`withBasePath()`
+Base paths, deployment prefixes, and similar environment-specific URL concerns should not be scattered throughout the application.
 
-should remain a URL concern.
+Code that needs a URL should receive the appropriate URL information rather than independently reconstructing deployment details.
 
-Rendering should receive the required URL information rather than reading environment variables directly.
+---
 
-# 11. Infrastructure
+## 11. Infrastructure
 
-Location:
+Infrastructure concerns should remain at the boundaries of the system.
 
-`src/infrastructure/`
+This includes things such as:
 
-Infrastructure contains environment-specific operations.
+* filesystem access
+* environment variables
+* template loading
+* asset handling
+* writing generated files
+* other environment-specific operations
 
-Examples:
+Core application logic should depend on the information provided by infrastructure rather than directly controlling these mechanisms wherever practical.
 
-* Filesystem access
-* Template loading
-* Asset copying
-* Output writing
+---
 
-Infrastructure may depend on application and domain data.
+## 12. Output
 
-Domain code should not depend on infrastructure.
+Output should consume already-processed information and produce the generated site.
 
-# 12. Output
+Writing files should not require Muffin to rediscover or reinterpret the source content.
 
-Output is responsible for creating the generated site.
+The output layer should therefore remain independent from content analysis and graph construction.
 
-This includes:
+Adding a new generated artifact should not require unrelated content-processing logic to become aware of how that artifact is written.
 
-* Writing HTML
-* Writing CSS
-* Copying assets
-* Creating directories
-* Maintaining the output structure
+---
 
-Output should consume already-processed data.
+## 13. Dependency Direction
 
-It should not perform Markdown parsing, backlink calculation, or other content analysis.
-
-# 13. Dependency Direction
-
-The most important rule is:
-
-Core data should not depend on environment-specific details.
-
-Conceptually:
+Muffin should generally follow this principle:
 
 ```text
-Domain
-  ↑
-Application
-  ↑
-Infrastructure / Presentation
+Core concepts
+     ↑
+Application behavior
+     ↑
+Infrastructure / presentation
 ```
 
-Domain code should not import:
+The important idea is that **core concepts should not depend on environment-specific details**.
 
-* `fs`
-* HTML templates
-* CSS
-* Environment variables
-* Output writers
-* Deployment-specific code
+Dependencies should generally point toward more concrete implementation concerns rather than allowing filesystem, rendering, or deployment details to spread throughout the system.
 
-`build.ts` connects everything together.
+This is a guideline rather than an absolute rule. Practical simplicity is more important than enforcing a theoretical dependency structure at all costs.
 
-Modules should never import `build.ts`.
+---
 
-# 14. Refactoring Order
+## 14. Testing
 
-Refactor incrementally.
+Architecture should make individual responsibilities testable.
 
-Do not build the entire architecture at once.
+Ideally:
 
-Recommended order:
+* content processing can be tested without rendering
+* graph construction can be tested without HTML
+* rendering can be tested with prepared data
+* configuration can be tested independently
+* output can be tested without reimplementing content analysis
 
-## Phase 1
+Tests should reinforce the boundaries that make Muffin understandable.
 
-Extract existing responsibilities from `build.ts`:
+The architecture should not become more complicated merely to make something theoretically testable.
 
-1. Content Loader
-2. Markdown Processor
-3. Site Graph / Backlinks
-4. Renderer
-5. Output / Assets
+---
 
-Preserve behavior after every extraction.
+## 15. Evolving Muffin
 
-## Phase 2
+Muffin should evolve incrementally.
 
-Introduce the core domain models:
+When introducing a feature:
 
-* Page
-* PageMetadata
-* Link
-* ExplorerNode
-* SiteGraph
-* BuildContext
-* RenderContext
+1. Identify which responsibility the feature belongs to.
+2. Keep that responsibility contained where practical.
+3. Reuse existing boundaries instead of creating parallel systems.
+4. Avoid modifying unrelated parts of the pipeline.
+5. Introduce new abstractions only when the existing design genuinely becomes insufficient.
 
-## Phase 3
+New capabilities should fit into the existing direction of the architecture rather than forcing the entire system to accommodate them.
 
-Separate graph logic from rendering.
+The architecture should support growth without requiring Muffin to anticipate every possible feature in advance.
 
-Move backlink calculation out of rendering.
+---
 
-Move Explorer construction out of Explorer HTML rendering.
+## 16. A Healthy Muffin Architecture
 
-## Phase 4
+A healthy architecture should make the following kinds of changes relatively localized:
 
-Introduce the page renderer registry.
+* changing how source content is interpreted
+* changing how links are resolved
+* changing how pages are rendered
+* changing the site's visual presentation
+* changing how generated files are written
+* adding a meaningful new capability
 
-Start with the default page type.
+Changes should not routinely require modifications across the entire build process.
 
-## Phase 5
+The exact module boundaries may change over time. What matters is that responsibilities remain clear and dependencies remain understandable.
 
-Convert Markdown processing into an explicit transformer pipeline.
+---
 
-## Phase 6
+## 17. Guiding Principle
 
-Finish configuration and theme separation.
+Muffin should remain **small, understandable, and composable**.
 
-Remove hardcoded policy where appropriate.
+Architecture exists to make the project easier to understand, modify, test, and extend.
 
-## Phase 7
+It should not exist for its own sake.
 
-Add tests for:
+When choosing between a simple design and a more elaborate abstraction, prefer the simpler design unless the added structure solves a real problem.
 
-* Slugging
-* Wikilinks
-* Backlinks
-* Explorer construction
-* Configuration
-* Renderers
+The goal is not to predict what Muffin will become.
 
-## Phase 8
-
-Add additional page types after the architecture is stable.
-
-# 15. Definition of Done
-
-The architecture is successful when:
-
-* Markdown processing can change without rewriting page renderers.
-* Backlinks can be tested without generating HTML.
-* Explorer construction can be tested without HTML.
-* A new page type can be added without changing `build.ts`.
-* Theme changes do not require content-processing changes.
-* Filesystem details are isolated from domain logic.
-* New output artifacts do not require rewriting the content pipeline.
-* Major modules can be tested independently.
-* `build.ts` primarily coordinates the system.
-
-# 16. Guiding Principle
-
-Muffin should remain small.
-
-The architecture exists to make the project easier to understand, modify, test, and extend.
-
-Do not introduce architecture simply for the sake of architecture.
-
-**Keep Muffin simple.**
+The goal is to give Muffin enough structure that it can **grow without losing its simplicity**.

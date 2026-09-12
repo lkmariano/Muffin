@@ -1,33 +1,38 @@
-import matter from "gray-matter";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { wikilinkPlugin, wikilinkToUrlPlugin } from "../../plugins/wikilinks.js";
 
-export interface RenderMarkdownResult {
-  html: string;
-  frontmatter: Record<string, unknown>;
+import type { Root } from "mdast";
+
+export type ParsedMarkdown = {
+  path: string;
+  tree: Root;
+};
+
+export async function parseMarkdown(
+  body: string,
+  slugMap: Record<string, string[]>,
+  currentFile: string,
+): Promise<Root> {
+  const parser = unified().use(remarkParse).use(wikilinkPlugin, slugMap, currentFile);
+
+  const tree = parser.parse(body) as Root;
+  return parser.run(tree) as Promise<Root>;
+}
+
+export async function renderMarkdownTree(tree: Root): Promise<string> {
+  const renderer = unified().use(wikilinkToUrlPlugin).use(remarkRehype).use(rehypeStringify);
+
+  const hast = await renderer.run(tree);
+  return String(renderer.stringify(hast));
 }
 
 export async function renderMarkdown(
-  content: string,
+  body: string,
   slugMap: Record<string, string[]>,
   currentFile: string,
-): Promise<RenderMarkdownResult> {
-  const matterData = matter(content);
-
-  const processor = unified()
-    .use(remarkParse)
-    .use(wikilinkPlugin, slugMap, currentFile)
-    .use(wikilinkToUrlPlugin)
-    .use(remarkRehype)
-    .use(rehypeStringify);
-
-  const processedContent = await processor.process(matterData.content);
-
-  return {
-    html: String(processedContent),
-    frontmatter: matterData.data as Record<string, unknown>,
-  };
+): Promise<string> {
+  return renderMarkdownTree(await parseMarkdown(body, slugMap, currentFile));
 }

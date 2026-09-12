@@ -1,48 +1,25 @@
-import matter from "gray-matter";
-import remarkParse from "remark-parse";
-import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import { getSlug, getTitle } from "../../util.js";
-import { wikilinkPlugin, wikilinkToUrl } from "../../plugins/wikilinks.js";
+import { wikilinkToUrl } from "../../plugins/wikilinks.js";
 
+import type { ParsedMarkdown } from "../content/markdown.js";
 import type { Backlink } from "../domain/page.js";
 import type { SiteGraph } from "../domain/siteGraph.js";
 
-async function extractWikilinkTargets(
-  content: string,
-  currentFile: string,
-  slugMap: Record<string, string[]>,
-): Promise<string[]> {
-  const matterData = matter(content);
-
-  const linkExtractor = unified()
-    .use(remarkParse)
-    .use(wikilinkPlugin, slugMap, currentFile);
-
-  const linkTree = linkExtractor.parse(matterData.content);
-  const transformedLinkTree = await linkExtractor.run(linkTree);
-
-  const targets: string[] = [];
-  visit(transformedLinkTree, "link", (node: any) => {
-    if (!node.data || !node.data.isWikilink) {
-      return;
-    }
-    const targetSlug = getSlug(node.url);
-    targets.push(targetSlug);
-  });
-
-  return targets;
-}
-
 export async function buildSiteGraph(
-  contentMap: Map<string, string>,
-  slugMap: Record<string, string[]>,
+  parsed: ParsedMarkdown[],
 ): Promise<SiteGraph> {
   const forwardLinks: Record<string, string[]> = {};
 
-  for (const [file, content] of contentMap) {
-    const sourceSlug = getSlug(file);
-    forwardLinks[sourceSlug] = await extractWikilinkTargets(content, file, slugMap);
+  for (const { path, tree } of parsed) {
+    const targets: string[] = [];
+    visit(tree, "link", (node: any) => {
+      if (!node.data || !node.data.isWikilink) {
+        return;
+      }
+      targets.push(getSlug(node.url));
+    });
+    forwardLinks[getSlug(path)] = targets;
   }
 
   const backlinks: Record<string, string[]> = {};

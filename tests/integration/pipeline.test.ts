@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import fs from "node:fs";
-import { getMarkdownFiles } from "../../src/content/loader.js";
+import { loadContent } from "../../src/content/loader.js";
+import { parseMarkdown, renderMarkdownTree } from "../../src/content/markdown.js";
 import { buildSiteGraph, resolveBacklinks } from "../../src/graph/backlinks.js";
-import { renderMarkdown } from "../../src/content/markdown.js";
 import { getSlug } from "../../util.js";
 import { cleanupTempDir, makeTempDir, writeFile } from "../helpers.js";
 
@@ -22,38 +21,32 @@ describe("content pipeline", () => {
     writeFile(dir, "About.md", "# About\n\nSee **notes**.");
     writeFile(dir, "Notes/Deep Note.md", "Linked [[Home]].");
 
-    const markdownFiles = await getMarkdownFiles(dir);
-    expect(markdownFiles).toHaveLength(3);
+    const { contents, slugMap } = await loadContent(dir);
+    expect(contents).toHaveLength(3);
 
-    const slugMap: Record<string, string[]> = {};
-    for (const file of markdownFiles) {
-      const slug = getSlug(file);
-      if (!slugMap[slug]) {
-        slugMap[slug] = [];
-      }
-      slugMap[slug].push(file);
-    }
+    const parsed = await Promise.all(
+      contents.map(async (content) => ({
+        path: content.path,
+        tree: await parseMarkdown(content.body, slugMap, content.path),
+      })),
+    );
 
-    const contentMap = new Map<string, string>();
-    for (const file of markdownFiles) {
-      contentMap.set(file, fs.readFileSync(file, "utf-8"));
-    }
-
-    const graph = await buildSiteGraph(contentMap, slugMap);
+    const graph = await buildSiteGraph(parsed);
 
     const pages: Array<{
       slug: string;
       html: string;
-      frontmatter: Record<string, unknown>;
       backlinks: Array<{ title: string; href: string }>;
     }> = [];
-    for (const file of markdownFiles) {
-      const { html, frontmatter } = await renderMarkdown(contentMap.get(file)!, slugMap, file);
+    for (const content of contents) {
+      const slug = getSlug(content.path);
+      const parsedContent = parsed.find((p) => p.path === content.path);
+      if (!parsedContent) continue;
+      const html = await renderMarkdownTree(parsedContent.tree);
       pages.push({
-        slug: getSlug(file),
+        slug,
         html,
-        frontmatter,
-        backlinks: resolveBacklinks(graph, getSlug(file), slugMap),
+        backlinks: resolveBacklinks(graph, slug, slugMap),
       });
     }
 
@@ -61,7 +54,6 @@ describe("content pipeline", () => {
     expect(home).toBeDefined();
     expect(home?.html).toContain("Welcome to");
     expect(home?.html).toContain("</a>");
-    expect(home?.frontmatter.title).toBe("Home");
 
     expect(graph.forwardLinks["home"]).toEqual(["about"]);
     expect(graph.backlinks["home"]).toEqual(["deep-note"]);

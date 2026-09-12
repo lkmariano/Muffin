@@ -2,9 +2,10 @@ import matter from "gray-matter";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
-import { getSlug } from "../../util.js";
-import { wikilinkPlugin } from "../../plugins/wikilinks.js";
+import { getSlug, getTitle } from "../../util.js";
+import { wikilinkPlugin, wikilinkToUrl } from "../../plugins/wikilinks.js";
 
+import type { Backlink } from "../domain/page.js";
 import type { SiteGraph } from "../domain/siteGraph.js";
 
 async function extractWikilinkTargets(
@@ -60,4 +61,18 @@ export async function buildSiteGraph(
     forwardLinks,
     backlinks,
   };
+}
+
+export function resolveBacklinks(
+  graph: SiteGraph,
+  slug: string,
+  slugMap: Record<string, string[]>,
+): Backlink[] {
+  return (graph.backlinks[slug] ?? [])
+    .map((sourceSlug) => slugMap[sourceSlug]?.[0])
+    .filter((filePath): filePath is string => typeof filePath === "string")
+    .map((filePath) => ({
+      title: getTitle(filePath),
+      href: wikilinkToUrl(filePath),
+    }));
 }

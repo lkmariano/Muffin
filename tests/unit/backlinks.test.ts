@@ -1,10 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import fs from "node:fs";
-import { buildSiteGraph } from "../../src/graph/backlinks.js";
-import { getTitle } from "../../util.js";
-import { withBasePath } from "../../basePath.js";
+import { buildSiteGraph, resolveBacklinks } from "../../src/graph/backlinks.js";
 import { cleanupTempDir, makeTempDir, writeFile } from "../helpers.js";
-import path from "node:path";
 
 let dir: string;
 
@@ -22,20 +19,6 @@ function buildContentMap(filePaths: string[]): Map<string, string> {
     map.set(file, fs.readFileSync(file, "utf-8"));
   }
   return map;
-}
-
-function resolveBacklinks(
-  graph: { backlinks: Record<string, string[]> },
-  slug: string,
-  slugMap: Record<string, string[]>,
-): { title: string; href: string }[] {
-  return (graph.backlinks[slug] ?? [])
-    .map((sourceSlug) => slugMap[sourceSlug]?.[0])
-    .filter((filePath): filePath is string => typeof filePath === "string")
-    .map((filePath) => ({
-      title: getTitle(filePath),
-      href: withBasePath(`/${path.relative("./content", filePath).replace(/\.md$/, ".html").replace(/\\/g, "/")}`),
-    }));
 }
 
 describe("buildSiteGraph", () => {

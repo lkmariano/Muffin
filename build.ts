@@ -1,39 +1,19 @@
-import { getSlug, getTitle } from "./util.js";
+import { formatDate, getSlug, getTitle } from "./util.js";
 import { buildExplorerTree, renderExplorer } from "./plugins/explorer.js";
 import { getFileMeta, getMarkdownFiles } from "./src/content/loader.js";
 import { renderMarkdown } from "./src/content/markdown.js";
-import { buildSiteGraph } from "./src/graph/backlinks.js";
+import { buildSiteGraph, resolveBacklinks } from "./src/graph/backlinks.js";
 import { writePages } from "./src/output/writer.js";
 import { writeStaticAssets } from "./src/output/assets.js";
 import { loadPageTemplate } from "./src/output/templates.js";
 import { renderPage } from "./src/rendering/page.js";
-import { wikilinkToUrl } from "./plugins/wikilinks.js";
-import type { Backlink, Page } from "./src/domain/page.js";
-import type { SiteGraph } from "./src/domain/siteGraph.js";
+import type { Page } from "./src/domain/page.js";
 import fs from "node:fs";
-
-function formatDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
 
 function loadHomepage(): string | undefined {
   const raw = fs.readFileSync("./muffin.config.json", "utf-8");
   const config = JSON.parse(raw) as { homepage?: string };
   return config.homepage;
-}
-
-function resolveBacklinks(
-  graph: SiteGraph,
-  slug: string,
-  slugMap: Record<string, string[]>,
-): Backlink[] {
-  return (graph.backlinks[slug] ?? [])
-    .map((sourceSlug) => slugMap[sourceSlug]?.[0])
-    .filter((filePath): filePath is string => typeof filePath === "string")
-    .map((filePath) => ({
-      title: getTitle(filePath),
-      href: wikilinkToUrl(filePath),
-    }));
 }
 
 async function parseFiles() {

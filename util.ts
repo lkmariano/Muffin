@@ -8,3 +8,7 @@ export function getSlug(filePath: string): string {
 export function getTitle(filePath: string): string {
   return path.basename(filePath, ".md");
 }
+
+export function formatDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}

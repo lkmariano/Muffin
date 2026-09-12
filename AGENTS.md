@@ -22,16 +22,21 @@ Modular Monolith with a strictly unidirectional dependency pipeline:
 Configuration → Content → Transformers → Site Graph → Renderer → Output
 ```
 
+- **Content boundary:** `src/content/loader.ts` is the only module that
+  discovers and reads source-vault files; it emits `LoadedContent[]` + `slugMap`
+  with a validated root-relative `relPath`. Other layers consume that output
+  rather than accessing `./content`.
 - **Renderer restriction:** code in rendering/layout layers MUST NOT import `fs`
   or perform direct filesystem operations.
 - **Data isolation:** keep data parsing/page-structure definitions entirely
   separate from HTML generation.
+- **Composition root:** `build.ts` wires discovery → parse → graph → render →
+  output and may assemble `Page` objects; it must not own the implementation of
+  those stages.
 - **Page model:** everything maps to a structured `Page` object —
   `{ path, title, metadata, content, backlinks? }`, with
   `Backlink = { title, href }`. Do not pass raw strings between modules.
   The domain `Page` model lives in `src/domain/page.ts`.
-- **Registry pattern:** match page types to layouts via a centralized mapper;
-  do not write separate hardcoded build functions per page.
 
   (These rules follow the principles in `ARCHITECTURE.md` §1.)
 
@@ -69,12 +74,13 @@ For architectural/refactoring plans, return:
 
 | Path | Purpose |
 |------|---------|
+| `build.ts` | composition root — wires discovery → parse → graph → render → output and assembles `Page` objects |
 | `./content/*.md` | source vault (nested folders supported) |
 | `./templates/page.html` | HTML shell with `{{PLACEHOLDER}}` tokens |
 | `./templates/styles.css` | global stylesheet using CSS variables |
 | `./public/` | reserved for future static assets — currently unused (not copied by `writeStaticAssets()`) |
 | `./src/config/` | site config loading from disk (`loader.ts` → `SiteConfig` with optional `homepage`) |
-| `./src/content/` | file discovery (`loader.ts`) and markdown processing (`markdown.ts`) |
+| `./src/content/` | sole source-vault boundary: discovery/read + frontmatter parse (`loader.ts` → `LoadedContent` `{ path, relPath, frontmatter, body, mtime }` + `slugMap`); markdown parse/render (`markdown.ts`) |
 | `./src/graph/` | backlink graph (`backlinks.ts`) + explorer tree (`navigation.ts`, built from `LoadedContent.relPath` — no filesystem access) |
 | `./src/domain/` | models: `page.ts` (`Page`, `Backlink`, `PageMetadata`), `siteGraph.ts` (`SiteGraph`), `explorer.ts` (`ExplorerNode`) |
 | `./src/rendering/` | pure HTML generation — `page.ts`, `explorer.ts` — no `fs` imports |
@@ -95,8 +101,8 @@ For architectural/refactoring plans, return:
 tests run the pipeline end-to-end on temp dirs via `tests/helpers.ts`
 (`makeTempDir`/`writeFile`/`cleanupTempDir`).
 
-- `tests/unit/` — `markdown`, `wikilinks`, `backlinks`, `explorer`, `theme`,
-  `writer`, `page-renderer`, `util`, `basePath`
+- `tests/unit/` — `loader`, `markdown`, `wikilinks`, `backlinks`, `explorer`,
+  `theme`, `writer`, `page-renderer`, `util`, `basePath`
 - `tests/integration/` — `pipeline` (discovery → graph → render)
 
 ## Pipeline Flow
@@ -115,9 +121,11 @@ getMarkdownFiles("./content")              → src/content/loader.ts
   → ./muffin/ (mirrors folder structure)
 ```
 
-- **Single parse:** each markdown body is parsed into an mdast tree exactly once
-  (`parseMarkdown`, which also resolves wikilinks). Graph construction only
-  inspects the shared trees; rendering only hastifies them (`renderMarkdownTree`).
+- **Single parse + rendering mutates the tree:** each body is parsed once into a
+  shared mdast tree (`parseMarkdown` resolves wikilinks into `link` nodes).
+  `buildSiteGraph` consumes the trees first; `renderMarkdownTree` then rewrites
+  wikilink URLs to final hrefs and hastifies the same trees. Graph construction
+  MUST run before content rendering — rendering mutates the shared AST.
 - **Slug:** `basename(filename, .md)` lowercased, spaces/underscores → hyphens.
 - **Wikilink resolution:** duplicate filenames resolve same-folder-first, walking
   up the directory tree for precedence (`plugins/wikilinks.ts`).

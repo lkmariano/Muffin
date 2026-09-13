@@ -10,6 +10,7 @@ import { loadPageTemplate } from "./src/output/templates.js";
 import { renderPage } from "./src/rendering/page.js";
 import { loadConfig } from "./src/config/loader.js";
 import { BASE_PATH } from "./basePath.js";
+import { resolvePageType } from "./src/domain/page.js";
 import type { Page } from "./src/domain/page.js";
 import type { Root } from "mdast";
 
@@ -36,11 +37,15 @@ async function parseFiles() {
 
     parsedData.push({
       path: content.path,
+      // CHANGED: reuse the slug computed for backlink resolution on the Page itself.
+      slug,
       title: getTitle(content.path),
       metadata: {
         frontmatter: content.frontmatter,
         ...(typeof statusValue === "string" ? { status: statusValue } : {}),
         updated: formatDate(content.mtime),
+        // CHANGED: resolve the page type from frontmatter (defaults to "note").
+        pageType: resolvePageType(content.frontmatter),
       },
       content: await renderMarkdownTree(trees[content.path]!, BASE_PATH),
       backlinks: resolveBacklinks(graph, slug, slugMap, BASE_PATH),

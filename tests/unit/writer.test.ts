@@ -46,3 +46,52 @@ describe("writePages homepage", () => {
     expect(fs.existsSync(path.join(outputRoot, "projects.html"))).toBe(true);
   });
 });
+
+describe("writePages pruning", () => {
+  it("removes stale pages no longer present in the content set", () => {
+    writePages(makePages(), { contentRoot, outputRoot });
+    expect(fs.existsSync(path.join(outputRoot, "notes.html"))).toBe(true);
+    expect(fs.existsSync(path.join(outputRoot, "projects.html"))).toBe(true);
+
+    writePages([makePages()[0]!], { contentRoot, outputRoot });
+
+    expect(fs.existsSync(path.join(outputRoot, "notes.html"))).toBe(false);
+    expect(fs.existsSync(path.join(outputRoot, "projects.html"))).toBe(true);
+  });
+
+  it("removes stale nested pages and the empty directories they leave behind", () => {
+    const nested = {
+      path: path.join(contentRoot, "Projects", "Tiketa", "Tiketa.md"),
+      renderedHtml: "<h1>Tiketa</h1>",
+    };
+    writePages([nested], { contentRoot, outputRoot });
+
+    const nestedOutput = path.join(outputRoot, "Projects", "Tiketa", "Tiketa.html");
+    expect(fs.existsSync(nestedOutput)).toBe(true);
+
+    writePages([], { contentRoot, outputRoot });
+
+    expect(fs.existsSync(nestedOutput)).toBe(false);
+    expect(fs.existsSync(path.join(outputRoot, "Projects", "Tiketa"))).toBe(false);
+  });
+
+  it("removes an orphaned index.html when the homepage no longer matches", () => {
+    writePages(makePages(), { homepage: "projects", contentRoot, outputRoot });
+    expect(fs.existsSync(path.join(outputRoot, "index.html"))).toBe(true);
+
+    writePages(makePages(), { contentRoot, outputRoot });
+
+    expect(fs.existsSync(path.join(outputRoot, "index.html"))).toBe(false);
+    expect(fs.existsSync(path.join(outputRoot, "projects.html"))).toBe(true);
+  });
+
+  it("leaves non-html files in the output root untouched", () => {
+    writePages(makePages(), { contentRoot, outputRoot });
+    const cssPath = path.join(outputRoot, "styles.css");
+    fs.writeFileSync(cssPath, ":root {}", "utf-8");
+
+    writePages(makePages().slice(0, 1), { contentRoot, outputRoot });
+
+    expect(fs.existsSync(cssPath)).toBe(true);
+  });
+});

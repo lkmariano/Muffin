@@ -291,3 +291,30 @@ code {
   padding: var(--spacing-1) var(--spacing-3);
   font-size: 0.85em;
 }
+
+/* CHANGED: page-type styles. These scope off data attributes the engine injects
+   onto <body> (see rendering/page.ts). Theme variables stay global — no per-type
+   config tokens needed. */
+
+body[data-page-type="home"] aside {
+  display: none;
+}
+
+body[data-page-type="home"] .content {
+  max-width: var(--layout-content-max-width);
+}
+
+body[data-page-type="portfolio"] .content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+}
+
+body[data-page-type="portfolio"] .content h2 {
+  padding-bottom: var(--spacing-4);
+  border-bottom: 1px solid var(--colors-border-subtle);
+}
+
+body[data-slug="projects"] .content {
+  max-width: var(--layout-content-max-width);
+}

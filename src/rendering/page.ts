@@ -2,6 +2,8 @@ import type { Backlink, PageMetadata } from "../domain/page.js";
 import { withBasePath } from "../../basePath.js";
 
 export interface RenderablePage {
+  // ADDED: slug — paired with metadata.pageType to build the body attributes.
+  slug: string;
   title: string;
   content: string;
   metadata: PageMetadata;
@@ -30,6 +32,10 @@ export function renderPage(
   metaParts.push(`<span class="page-updated">Updated ${page.metadata.updated}</span>`);
   const pageMetaHtml = `<div class="page-meta">${metaParts.join("")}</div>`;
 
+  // ADDED: body attributes keyed off the page type + slug. These are the hooks
+  // the global stylesheet scopes layout rules on (e.g. body[data-page-type="home"]).
+  const bodyAttrs = `data-page-type="${escapeAttr(page.metadata.pageType)}" data-slug="${escapeAttr(page.slug)}"`;
+
   return template
     .replaceAll("{{TITLE}}", page.title)
     .replaceAll("{{BACKLINKS}}", backlinksHtml)
@@ -37,5 +43,15 @@ export function renderPage(
     .replaceAll("{{THEME_CSS}}", themeCssHref)
     .replaceAll("{{CSS}}", cssHref)
     .replaceAll("{{PAGE_META}}", pageMetaHtml)
+    .replaceAll("{{BODY_ATTRS}}", bodyAttrs)
     .replaceAll("{{CONTENT}}", page.content);
+}
+
+// ADDED: escape attribute values so generated HTML can't be broken by quotes/angles.
+function escapeAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }

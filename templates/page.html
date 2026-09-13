@@ -6,7 +6,8 @@
     <link rel="stylesheet" href="{{THEME_CSS}}">
     <link rel="stylesheet" href="{{CSS}}">
   </head>
-  <body>
+  <!-- CHANGED: {{BODY_ATTRS}} injects data-page-type + data-slug onto <body> -->
+  <body {{BODY_ATTRS}}>
     <div class="page">
       <nav>
         <div class="site-title">Muffin</div>

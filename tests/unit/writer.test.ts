@@ -47,6 +47,66 @@ describe("writePages homepage", () => {
   });
 });
 
+describe("writePages default homepage", () => {
+  it("uses home.md as index.html when no homepage is configured", () => {
+    const pages = [
+      ...makePages(),
+      { path: path.join(contentRoot, "home.md"), renderedHtml: "<h1>Home</h1>" },
+    ];
+    writePages(pages, { contentRoot, outputRoot });
+
+    expect(fs.readFileSync(path.join(outputRoot, "index.html"), "utf-8")).toBe("<h1>Home</h1>");
+    expect(fs.existsSync(path.join(outputRoot, "home.html"))).toBe(true);
+  });
+
+  it("uses home.md over index.md", () => {
+    const pages = [
+      ...makePages(),
+      { path: path.join(contentRoot, "home.md"), renderedHtml: "<h1>Home</h1>" },
+      { path: path.join(contentRoot, "index.md"), renderedHtml: "<h1>Index</h1>" },
+    ];
+    writePages(pages, { contentRoot, outputRoot });
+
+    expect(fs.readFileSync(path.join(outputRoot, "index.html"), "utf-8")).toBe("<h1>Home</h1>");
+  });
+
+  it("uses index.md when home.md is absent", () => {
+    const pages = [
+      ...makePages(),
+      { path: path.join(contentRoot, "index.md"), renderedHtml: "<h1>Index</h1>" },
+    ];
+    writePages(pages, { contentRoot, outputRoot });
+
+    expect(fs.readFileSync(path.join(outputRoot, "index.html"), "utf-8")).toBe("<h1>Index</h1>");
+  });
+
+  it("matches fallback basenames case-insensitively", () => {
+    const pages = [
+      ...makePages(),
+      { path: path.join(contentRoot, "HOME.md"), renderedHtml: "<h1>Home</h1>" },
+    ];
+    writePages(pages, { contentRoot, outputRoot });
+
+    expect(fs.readFileSync(path.join(outputRoot, "index.html"), "utf-8")).toBe("<h1>Home</h1>");
+  });
+
+  it("gives explicit homepage precedence over fallbacks", () => {
+    const pages = [
+      ...makePages(),
+      { path: path.join(contentRoot, "home.md"), renderedHtml: "<h1>Home</h1>" },
+    ];
+    writePages(pages, { homepage: "projects", contentRoot, outputRoot });
+
+    expect(fs.readFileSync(path.join(outputRoot, "index.html"), "utf-8")).toBe("<h1>Projects</h1>");
+  });
+
+  it("does not write index.html when no fallback home or index page exists", () => {
+    writePages(makePages(), { contentRoot, outputRoot });
+
+    expect(fs.existsSync(path.join(outputRoot, "index.html"))).toBe(false);
+  });
+});
+
 describe("writePages pruning", () => {
   it("removes stale pages no longer present in the content set", () => {
     writePages(makePages(), { contentRoot, outputRoot });

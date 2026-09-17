@@ -5,18 +5,22 @@ import { loadContent } from "./src/content/loader.js";
 import { parseMarkdown, renderMarkdownTree } from "./src/content/markdown.js";
 import { buildSiteGraph, resolveBacklinks } from "./src/graph/backlinks.js";
 import { writePages } from "./src/output/writer.js";
-import { writeStaticAssets } from "./src/output/assets.js";
+import { copyAssets, writeStaticAssets } from "./src/output/assets.js";
 import { loadPageTemplate } from "./src/output/templates.js";
 import { renderPage } from "./src/rendering/page.js";
 import { loadConfig } from "./src/config/loader.js";
-import { BASE_PATH } from "./basePath.js";
-import { resolvePageType } from "./src/domain/page.js";
 import type { Page } from "./src/domain/page.js";
 import type { Root } from "mdast";
 
-async function parseFiles() {
-  const { contents, slugMap } = await loadContent("./content");
+async function parseFiles(
+  contentDir: string,
+  exclude: string[],
+  basePath: string,
+) {
+  const { contents, assets, slugMap } = await loadContent(contentDir, exclude);
   const parsedData: Page[] = [];
+
+  const assetPaths = assets.map((asset) => asset.relPath);
 
   const trees: Record<string, Root> = {};
   for (const content of contents) {
@@ -24,6 +28,7 @@ async function parseFiles() {
       content.body,
       slugMap,
       content.relPath,
+      assetPaths,
     );
   }
 
@@ -37,43 +42,55 @@ async function parseFiles() {
 
     parsedData.push({
       path: content.path,
-      // CHANGED: reuse the slug computed for backlink resolution on the Page itself.
       slug,
       title: getTitle(content.path),
       metadata: {
         frontmatter: content.frontmatter,
         ...(typeof statusValue === "string" ? { status: statusValue } : {}),
         updated: formatDate(content.mtime),
-        // CHANGED: resolve the page type from frontmatter (defaults to "note").
-        pageType: resolvePageType(content.frontmatter),
       },
-      content: await renderMarkdownTree(trees[content.path]!, BASE_PATH),
-      backlinks: resolveBacklinks(graph, slug, slugMap, BASE_PATH),
+      content: await renderMarkdownTree(trees[content.path]!, basePath),
+      backlinks: resolveBacklinks(graph, slug, slugMap, basePath),
     });
   }
 
-  return { parsedData, contents };
+  return { parsedData, contents, assets };
 }
 
-console.log("Parsing markdown files...");
-parseFiles()
-  .then(({ parsedData, contents }) => {
+async function main(): Promise<void> {
+  const config = await loadConfig();
+  const outputRoot = config.output.directory;
+
+  console.log("Parsing markdown files...");
+  try {
+    const { parsedData, contents, assets } = await parseFiles(
+      config.content.directory,
+      config.content.exclude,
+      config.site.basePath,
+    );
+
     if (parsedData.length === 0) {
       console.log("No pages found to render.");
-      return;
+    } else {
+      const explorerTree = buildExplorerTree(contents);
+      const explorerHtml = renderExplorer(explorerTree, config.site.basePath);
+      const template = loadPageTemplate();
+      const outputPages = parsedData.map((page) => ({
+        path: page.path,
+        renderedHtml: renderPage(page, template, explorerHtml, config.site, config.site.basePath),
+      }));
+      writePages(outputPages, {
+        ...(config.homepage === undefined ? {} : { homepage: config.homepage }),
+        contentRoot: config.content.directory,
+        outputRoot,
+      });
+      writeStaticAssets(config.theme, { outputRoot });
     }
-    const explorerTree = buildExplorerTree(contents);
-    const explorerHtml = renderExplorer(explorerTree, BASE_PATH);
-    const template = loadPageTemplate();
-    const outputPages = parsedData.map((page) => ({
-      path: page.path,
-      renderedHtml: renderPage(page, template, explorerHtml, BASE_PATH),
-    }));
-    const config = loadConfig("./muffin.config.json");
-    writePages(outputPages, config.homepage === undefined ? {} : { homepage: config.homepage });
-    writeStaticAssets(config);
-  })
-  .catch((error) => {
+    copyAssets(assets, { outputRoot });
+  } catch (error) {
     console.error("Build failed:", error);
     process.exit(1);
-  });
+  }
+}
+
+main();

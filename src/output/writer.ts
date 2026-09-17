@@ -13,6 +13,8 @@ export interface WritePagesOptions {
   outputRoot?: string;
 }
 
+const HOMEPAGE_FALLBACKS = ["home", "index"];
+
 export function writePages(pages: OutputPage[], options: WritePagesOptions = {}): void {
   const contentRoot = path.resolve(options.contentRoot ?? "./content");
   const outputRoot = path.resolve(options.outputRoot ?? "./muffin");
@@ -27,18 +29,31 @@ export function writePages(pages: OutputPage[], options: WritePagesOptions = {})
     fs.writeFileSync(outputPath, page.renderedHtml, "utf-8");
   }
 
-  if (options.homepage !== undefined) {
-    const homepage = pages.find(
-      (page) => path.basename(page.path, ".md") === options.homepage,
-    );
-    if (homepage) {
-      const indexPath = path.resolve(outputRoot, "index.html");
-      expected.add(indexPath);
-      fs.writeFileSync(indexPath, homepage.renderedHtml, "utf-8");
-    }
+  const homepage = resolveHomepage(pages, options.homepage);
+  if (homepage) {
+    const indexPath = path.resolve(outputRoot, "index.html");
+    expected.add(indexPath);
+    fs.writeFileSync(indexPath, homepage.renderedHtml, "utf-8");
   }
 
   cleanupStaleHtml(outputRoot, expected);
+}
+
+function resolveHomepage(pages: OutputPage[], homepage?: string): OutputPage | undefined {
+  if (homepage !== undefined) {
+    return pages.find((page) => path.basename(page.path, ".md") === homepage);
+  }
+
+  for (const candidate of HOMEPAGE_FALLBACKS) {
+    const match = pages.find(
+      (page) => path.basename(page.path, ".md").toLowerCase() === candidate,
+    );
+    if (match) {
+      return match;
+    }
+  }
+
+  return undefined;
 }
 
 // COMMENT: prunes generated output so it mirrors the current content set.

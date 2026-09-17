@@ -65,4 +65,82 @@ describe("renderMarkdown", () => {
     expect(html).toContain("See Missing Note");
     expect(html).not.toContain("<a");
   });
+
+  it("renders a resolved image embed with a root-relative asset URL", async () => {
+    const source = writeFile(dir, "notes/example.md", "See ![[test.png|300]].");
+    const body = fs.readFileSync(source, "utf-8");
+
+    const html = await renderMarkdown(body, {}, "notes/example.md", "", ["images/test.png"]);
+
+    expect(html).toContain('<img src="/images/test.png" alt="test" width="300">');
+  });
+
+  it("renders a nested page image embed with a root-relative URL", async () => {
+    const source = writeFile(dir, "notes/example.md", "See ![[test.png]].");
+    const body = fs.readFileSync(source, "utf-8");
+
+    const html = await renderMarkdown(body, {}, "notes/example.md", "", ["images/test.png"]);
+
+    expect(html).toContain('<img src="/images/test.png" alt="test">');
+  });
+
+  it("renders missing image embeds as literal text", async () => {
+    const source = writeFile(dir, "source.md", "See ![[missing.png]]");
+    const body = fs.readFileSync(source, "utf-8");
+
+    const html = await renderMarkdown(body, {}, "source.md", "", ["images/test.png"]);
+
+    expect(html).toContain("![[missing.png]]");
+    expect(html).not.toContain("<img");
+  });
+
+  it("keeps embeds of discovered non-image assets as literal text", async () => {
+    const source = writeFile(dir, "source.md", "See ![[clip.mp4]]");
+    const body = fs.readFileSync(source, "utf-8");
+
+    const html = await renderMarkdown(body, {}, "source.md", "", ["clip.mp4"]);
+
+    expect(html).toContain("![[clip.mp4]]");
+    expect(html).not.toContain("<img");
+  });
+
+  it("renders multiple image embeds", async () => {
+    const source = writeFile(dir, "source.md", "![[a.png]] and ![[b.gif|120]]");
+    const body = fs.readFileSync(source, "utf-8");
+
+    const html = await renderMarkdown(body, {}, "source.md", "", ["a.png", "b.gif"]);
+
+    expect(html).toContain('<img src="/a.png" alt="a">');
+    expect(html).toContain('<img src="/b.gif" alt="b" width="120">');
+  });
+
+  it("applies the base path to image embed URLs", async () => {
+    const source = writeFile(dir, "source.md", "![[test.png]]");
+    const body = fs.readFileSync(source, "utf-8");
+
+    const html = await renderMarkdown(body, {}, "source.md", "/Muffin", ["test.png"]);
+
+    expect(html).toContain('<img src="/Muffin/test.png" alt="test">');
+  });
+
+  it("leaves standard markdown images unchanged", async () => {
+    const source = writeFile(dir, "source.md", "![alt](plain.png)");
+    const body = fs.readFileSync(source, "utf-8");
+
+    const html = await renderMarkdown(body, {}, "source.md", "", ["plain.png"]);
+
+    expect(html).toContain('<img src="plain.png" alt="alt">');
+  });
+
+  it("keeps wikilinks working alongside image embeds", async () => {
+    const target = writeFile(dir, "Target Note.md", "# Target");
+    const source = writeFile(dir, "source.md", "See [[Target Note]] and ![[test.png]]");
+    const body = fs.readFileSync(source, "utf-8");
+
+    const slugMap = { "target-note": [path.relative(dir, target)] };
+    const html = await renderMarkdown(body, slugMap, path.relative(dir, source), "", ["images/test.png"]);
+
+    expect(html).toContain("Target%20Note.html");
+    expect(html).toContain('<img src="/images/test.png" alt="test">');
+  });
 });

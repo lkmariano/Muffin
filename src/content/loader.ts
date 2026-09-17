@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
+import mm from "micromatch";
 import { getSlug } from "../../util.js";
+
+const ASSET_EXTENSION_PATTERN = /\.(png|jpe?g|gif|webp|svg|pdf)$/i;
 
 export type LoadedContent = {
   path: string;
@@ -11,48 +14,91 @@ export type LoadedContent = {
   mtime: Date;
 };
 
+export type LoadedAsset = {
+  path: string;
+  relPath: string;
+};
+
 export type LoadedContentResult = {
   contents: LoadedContent[];
+  assets: LoadedAsset[];
   slugMap: Record<string, string[]>;
 };
 
-export async function getMarkdownFiles(directory: string): Promise<string[]> {
-  const markdownFiles: string[] = [];
+export type FilePredicate = (name: string) => boolean;
+
+export function isMarkdownFile(name: string): boolean {
+  return name.endsWith(".md");
+}
+
+export function isAssetFile(name: string): boolean {
+  return ASSET_EXTENSION_PATTERN.test(name);
+}
+
+export async function getFiles(
+  directory: string,
+  predicate: FilePredicate,
+): Promise<string[]> {
+  const files: string[] = [];
   const contentDirectory = fs.readdirSync(directory, { withFileTypes: true });
 
   for (const dirent of contentDirectory) {
     const fullPath = path.join(directory, dirent.name);
     if (dirent.isDirectory()) {
-      const nestedMarkdownFiles = await getMarkdownFiles(fullPath);
-      markdownFiles.push(...nestedMarkdownFiles);
-    } else if (dirent.isFile() && dirent.name.endsWith(".md")) {
-      markdownFiles.push(fullPath);
+      const nestedFiles = await getFiles(fullPath, predicate);
+      files.push(...nestedFiles);
+    } else if (dirent.isFile() && predicate(dirent.name)) {
+      files.push(fullPath);
     }
   }
 
-  return markdownFiles;
+  return files;
 }
 
-export async function loadContent(directory: string): Promise<LoadedContentResult> {
-  const markdownFiles = await getMarkdownFiles(directory);
+export async function getMarkdownFiles(directory: string): Promise<string[]> {
+  return getFiles(directory, isMarkdownFile);
+}
+
+function requireRelPath(directory: string, file: string): string {
+  const relPath = path.relative(directory, file);
+  const firstSegment = relPath.split(path.sep)[0];
+  if (
+    !relPath ||
+    relPath === "." ||
+    path.isAbsolute(relPath) ||
+    firstSegment === ".."
+  ) {
+    throw new Error(
+      `Cannot derive a valid relative path for "${file}" from content root "${directory}".`,
+    );
+  }
+  return relPath;
+}
+
+function isExcluded(exclude: string[], relPath: string): boolean {
+  if (exclude.length === 0) {
+    return false;
+  }
+  const normalized = relPath.replace(/\\/g, "/");
+  return mm.isMatch(normalized, exclude, { dot: true });
+}
+
+export async function loadContent(
+  directory: string,
+  exclude: string[] = [],
+): Promise<LoadedContentResult> {
+  const markdownFiles = (
+    await getMarkdownFiles(directory)
+  ).filter((file) => !isExcluded(exclude, requireRelPath(directory, file)));
+  const assetFiles = (
+    await getFiles(directory, isAssetFile)
+  ).filter((file) => !isExcluded(exclude, requireRelPath(directory, file)));
 
   const slugMap: Record<string, string[]> = {};
 
   const contents: LoadedContent[] = markdownFiles.map((file) => {
     const slug = getSlug(file);
-
-    const relPath = path.relative(directory, file);
-    const firstSegment = relPath.split(path.sep)[0];
-    if (
-      !relPath ||
-      relPath === "." ||
-      path.isAbsolute(relPath) ||
-      firstSegment === ".."
-    ) {
-      throw new Error(
-        `Cannot derive a valid relative path for "${file}" from content root "${directory}".`,
-      );
-    }
+    const relPath = requireRelPath(directory, file);
 
     if (!slugMap[slug]) {
       slugMap[slug] = [];
@@ -73,5 +119,10 @@ export async function loadContent(directory: string): Promise<LoadedContentResul
     };
   });
 
-  return { contents, slugMap };
+  const assets: LoadedAsset[] = assetFiles.map((file) => ({
+    path: file,
+    relPath: requireRelPath(directory, file),
+  }));
+
+  return { contents, assets, slugMap };
 }

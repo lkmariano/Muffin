@@ -1,5 +1,5 @@
-/* Font @import is now generated into theme.css from muffin.config.json
-   (see theme.ts's generateFontImport) — no longer hardcoded here. */
+/* Font @import is generated into theme.css from the theme tokens in
+   muffin.config.ts (see src/theme/css.ts's generateFontImport). */
 
 * {
   box-sizing: border-box;
@@ -9,10 +9,12 @@ html, body {
   margin: 0px;
   height: 100vh;
   overflow: hidden;
-  font-family: var(--fonts-body);
-  color: var(--colors-text-primary);
-  line-height: 1.5;
-  background-color: var(--colors-surface-base);
+  font-family: var(--typography-body);
+  font-size: var(--typography-base-size);
+  font-weight: var(--typography-weight);
+  line-height: var(--typography-line-height);
+  color: var(--color-text);
+  background-color: var(--color-background);
 }
 
 .page {
@@ -53,16 +55,16 @@ nav {
 }
 
 .explorer-title {
-  font-size: var(--font-sizes-md);
+  font-size: var(--typography-size-md);
   font-weight: 700;
   letter-spacing: 0.02em;
-  color: var(--colors-text-primary);
+  color: var(--color-text);
   text-transform: uppercase;
 }
 
 .explorer-header-chevron {
-  font-size: var(--font-sizes-sm);
-  color: var(--colors-text-primary);
+  font-size: var(--typography-size-sm);
+  color: var(--color-text);
   transition: transform 0.15s ease;
 }
 
@@ -80,7 +82,7 @@ nav {
   padding-left: var(--spacing-6);
   margin: var(--spacing-1) 0px;
   text-align: left;
-  border-left: 1px solid var(--colors-border-subtle);
+  border-left: 1px solid var(--color-border);
 }
 
 .nav-links > .explorer-content > ul {
@@ -89,10 +91,11 @@ nav {
 }
 
 .site-title {
-  font-size: var(--font-sizes-2xl);
-  font-weight: 700;
+  font-family: var(--typography-heading);
+  font-size: var(--typography-size-2xl);
+  font-weight: var(--typography-heading-weight);
   line-height: 1.2;
-  color: var(--colors-text-primary);
+  color: var(--color-text);
   padding: 0 0 var(--spacing-7) var(--spacing-8);
   flex-shrink: 0;
   text-align: left;
@@ -104,14 +107,14 @@ nav li {
 
 nav a {
   text-decoration: none;
-  color: var(--colors-nav-link);
-  font-size: var(--font-sizes-lg);
+  color: var(--color-text-muted);
+  font-size: var(--typography-size-lg);
   font-weight: 400;
-  font-family: var(--fonts-body);
+  font-family: var(--typography-body);
 }
 
 nav a:hover {
-  color: var(--colors-text-primary);
+  color: var(--color-accent);
   text-decoration: underline;
 }
 
@@ -123,11 +126,11 @@ nav summary {
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  font-size: var(--font-sizes-lg);
-  font-weight: 700;
-  font-family: var(--fonts-body);
+  font-family: var(--typography-heading);
+  font-size: var(--typography-size-lg);
+  font-weight: var(--typography-heading-weight);
   cursor: pointer;
-  color: var(--colors-nav-summary);
+  color: var(--color-text);
   padding: var(--spacing-2) 0;
   list-style-position: outside;
 }
@@ -138,7 +141,7 @@ nav summary::-webkit-details-marker {
 }
 
 nav summary:hover {
-  color: var(--colors-nav-summary-hover);
+  color: var(--color-accent);
 }
 
 nav details ul {
@@ -148,7 +151,7 @@ nav details ul {
 .explorer-chevron {
   display: inline-block;
   font-size: 0.65em;
-  color: var(--colors-nav-summary);
+  color: var(--color-text-muted);
   transition: transform 0.15s ease;
 }
 
@@ -160,34 +163,29 @@ nav footer {
   flex-shrink: 0;
   padding: var(--spacing-7) var(--spacing-8) var(--spacing-7) var(--spacing-8);
   text-align: left;
-  font-size: var(--font-sizes-xs);
-  color: var(--colors-footer-text);
+  font-size: var(--typography-size-xs);
+  color: var(--color-text-muted);
   margin-top: var(--spacing-5);
   width: auto;
   height: auto;
 }
 
-nav footer a {
-  color: var(--colors-footer-link);
-  font-size: var(--font-sizes-xs);
-  font-weight: normal;
-}
-
 main {
   flex: 1;
-  max-width: var(--layout-main-max-width);
+  max-width: var(--layout-main-width);
   padding: var(--spacing-9) var(--spacing-11);
   overflow-y: auto;
   height: 100%;
 }
 
 .content {
-  max-width: var(--layout-content-max-width);
+  max-width: var(--layout-content-width);
 }
 
 main h1 {
-  font-size: var(--font-sizes-2xl);
-  font-weight: 700;
+  font-family: var(--typography-heading);
+  font-size: var(--typography-size-2xl);
+  font-weight: var(--typography-heading-weight);
   line-height: 1.2;
   margin-top: 0px;
 }
@@ -195,8 +193,8 @@ main h1 {
 .page-meta {
   display: flex;
   gap: var(--spacing-8);
-  font-size: var(--font-sizes-xs);
-  color: var(--colors-footer-text);
+  font-size: var(--typography-size-xs);
+  color: var(--color-text-muted);
   margin-bottom: var(--spacing-7);
 }
 
@@ -234,10 +232,11 @@ aside {
 }
 
 .aside-title {
-  font-size: var(--font-sizes-2xl);
-  font-weight: 700;
+  font-family: var(--typography-heading);
+  font-size: var(--typography-size-2xl);
+  font-weight: var(--typography-heading-weight);
   line-height: 1.2;
-  color: var(--colors-text-primary);
+  color: var(--color-text);
   padding: 0 var(--spacing-8) var(--spacing-7) 0;
   flex-shrink: 0;
   text-align: right;
@@ -245,28 +244,28 @@ aside {
 
 aside a {
   text-decoration: none;
-  color: var(--colors-aside-link);
-  font-size: var(--font-sizes-xl);
+  color: var(--color-link);
+  font-size: var(--typography-size-xl);
   font-weight: 600;
-  font-family: var(--fonts-body);
+  font-family: var(--typography-body);
 }
 
 aside a:hover {
   text-decoration: underline;
 }
 a {
-  color: var(--colors-link);
+  color: var(--color-link);
 }
 
 pre, code {
-  font-family: var(--fonts-mono);
+  font-family: var(--typography-mono);
 }
 
 pre {
-  background-color: var(--colors-code-bg);
-  color: var(--colors-code-text);
-  border: 1px solid var(--colors-code-border);
-  border-radius: var(--spacing-2);
+  background-color: var(--color-code-background);
+  color: var(--color-code);
+  border: 1px solid var(--color-code-border);
+  border-radius: var(--radius-md);
   padding: var(--spacing-5);
   overflow-wrap: break-word;
   word-wrap: break-word;
@@ -284,37 +283,51 @@ pre code {
 }
 
 code {
-  background-color: var(--colors-code-bg);
-  color: var(--colors-code-text);
-  border: 1px solid var(--colors-code-border);
-  border-radius: var(--spacing-2);
+  background-color: var(--color-code-background);
+  color: var(--color-code);
+  border: 1px solid var(--color-code-border);
+  border-radius: var(--radius-md);
   padding: var(--spacing-1) var(--spacing-3);
   font-size: 0.85em;
 }
 
-/* CHANGED: page-type styles. These scope off data attributes the engine injects
-   onto <body> (see rendering/page.ts). Theme variables stay global — no per-type
-   config tokens needed. */
-
-body[data-page-type="home"] aside {
-  display: none;
+mark {
+  background-color: #fff2b2;
+  color: inherit;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--spacing-1);
 }
 
-body[data-page-type="home"] .content {
-  max-width: var(--layout-content-max-width);
+.callout {
+  border-left: 3px solid var(--color-border);
+  background-color: #f7f7f7;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-4) var(--spacing-5);
+  margin: var(--spacing-4) 0;
 }
 
-body[data-page-type="portfolio"] .content {
+.callout-title {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-8);
+  align-items: center;
+  gap: var(--spacing-3);
+  font-weight: 700;
 }
 
-body[data-page-type="portfolio"] .content h2 {
-  padding-bottom: var(--spacing-4);
-  border-bottom: 1px solid var(--colors-border-subtle);
+.callout-title summary {
+  cursor: pointer;
 }
 
-body[data-slug="projects"] .content {
-  max-width: var(--layout-content-max-width);
+.callout-icon::before {
+  content: "•";
+}
+
+.callout-body {
+  margin-top: var(--spacing-3);
+}
+
+.pdf-embed {
+  display: block;
+  width: 100%;
+  height: 600px;
+  border: 0;
 }

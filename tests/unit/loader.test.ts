@@ -75,3 +75,142 @@ describe("loadContent", () => {
     expect(slugMap["beta"]?.[0]).toContain("Beta.md");
   });
 });
+
+describe("loadContent assets", () => {
+  it("discovers asset files alongside Markdown", async () => {
+    writeFile(dir, "note.md", "# Note");
+    writeFile(dir, "images/test.png", "png");
+    writeFile(dir, "notes/pic.jpg", "jpg");
+    writeFile(dir, "notes/logo.svg", "svg");
+    writeFile(dir, "notes/web.webp", "webp");
+    writeFile(dir, "anim.gif", "gif");
+
+    const { assets } = await loadContent(dir);
+
+    expect(assets.map((asset) => asset.relPath).sort()).toEqual([
+      "anim.gif",
+      "images/test.png",
+      "notes/logo.svg",
+      "notes/pic.jpg",
+      "notes/web.webp",
+    ]);
+  });
+
+  it("matches asset extensions case-insensitively", async () => {
+    writeFile(dir, "IMG.PNG", "png");
+    writeFile(dir, "logo.WebP", "webp");
+    writeFile(dir, "Photo.JPEG", "jpeg");
+
+    const { assets } = await loadContent(dir);
+
+    expect(assets.map((asset) => asset.relPath).sort()).toEqual([
+      "IMG.PNG",
+      "Photo.JPEG",
+      "logo.WebP",
+    ]);
+  });
+
+  it("ignores files that are not recognized assets", async () => {
+    writeFile(dir, "data.txt", "x");
+    writeFile(dir, ".DS_Store", "x");
+    writeFile(dir, "clip.mp4", "x");
+
+    const { assets } = await loadContent(dir);
+
+    expect(assets).toEqual([]);
+  });
+
+  it("discovers PDF assets at the root and in nested folders", async () => {
+    writeFile(dir, "manual.pdf", "%PDF");
+    writeFile(dir, "docs/report.pdf", "%PDF");
+
+    const { assets } = await loadContent(dir);
+
+    expect(assets.map((asset) => asset.relPath).sort()).toEqual([
+      "docs/report.pdf",
+      "manual.pdf",
+    ]);
+  });
+
+  it("matches PDF extensions case-insensitively", async () => {
+    writeFile(dir, "Guide.PDF", "%PDF");
+    writeFile(dir, "brochure.Pdf", "%PDF");
+
+    const { assets } = await loadContent(dir);
+
+    expect(assets.map((asset) => asset.relPath).sort()).toEqual([
+      "Guide.PDF",
+      "brochure.Pdf",
+    ]);
+  });
+
+  it("returns an empty asset list when the vault has no assets", async () => {
+    writeFile(dir, "note.md", "# Note");
+
+    const { assets } = await loadContent(dir);
+
+    expect(assets).toEqual([]);
+  });
+
+  it("derives a root-relative relPath for each asset", async () => {
+    writeFile(dir, "images/nested/test.png", "png");
+
+    const { assets } = await loadContent(dir);
+
+    expect(assets).toHaveLength(1);
+    expect(assets[0]?.relPath).toBe("images/nested/test.png");
+  });
+
+  it("keeps contents and slugMap intact when assets are present", async () => {
+    writeFile(dir, "Note.md", "# Note");
+    writeFile(dir, "images/test.png", "png");
+
+    const { contents, slugMap } = await loadContent(dir);
+
+    expect(contents).toHaveLength(1);
+    expect(slugMap["note"]).toBeDefined();
+  });
+});
+
+describe("loadContent exclude", () => {
+  it("filters markdown and assets matching a folder glob", async () => {
+    writeFile(dir, "Keep.md", "# Keep");
+    writeFile(dir, "drafts/Notes/Draft.md", "# Draft");
+    writeFile(dir, "drafts/pic.png", "png");
+    writeFile(dir, "images/ok.png", "png");
+
+    const { contents, assets } = await loadContent(dir, ["drafts/**"]);
+
+    expect(contents.map((content) => content.relPath)).toEqual(["Keep.md"]);
+    expect(assets.map((asset) => asset.relPath)).toEqual(["images/ok.png"]);
+  });
+
+  it("filters a single file by name pattern", async () => {
+    writeFile(dir, "Home.md", "# Home");
+    writeFile(dir, "draft_note.md", "# Draft");
+
+    const { contents } = await loadContent(dir, ["draft_*"]);
+
+    expect(contents.map((content) => content.relPath)).toEqual(["Home.md"]);
+  });
+
+  it("applies no filtering when no patterns are given", async () => {
+    writeFile(dir, "A.md", "# A");
+    writeFile(dir, "B.md", "# B");
+
+    const { contents } = await loadContent(dir);
+    expect(contents).toHaveLength(2);
+  });
+
+  it("leaves assets in non-excluded folders untouched", async () => {
+    writeFile(dir, "Note.md", "# Note");
+    writeFile(dir, "images/logo.png", "png");
+    writeFile(dir, "drafts/logo.png", "png");
+    writeFile(dir, "drafts/Draft.md", "# Draft");
+
+    const { contents, assets } = await loadContent(dir, ["drafts/**"]);
+
+    expect(contents.map((content) => content.relPath)).toEqual(["Note.md"]);
+    expect(assets.map((asset) => asset.relPath)).toEqual(["images/logo.png"]);
+  });
+});

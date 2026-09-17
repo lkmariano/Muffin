@@ -1,21 +1,26 @@
 {
   "name": "muffin",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "exports": {
+    ".": "./src/config/index.ts"
+  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "keywords": [],
-  "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
     "fast-glob": "^3.3.3",
     "gray-matter": "^4.0.3",
+    "katex": "^0.18.7",
     "mdast-util-find-and-replace": "^3.0.2",
+    "micromatch": "^4.0.8",
+    "rehype-katex": "^7.0.1",
     "rehype-stringify": "^10.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",
     "unified": "^11.0.5",

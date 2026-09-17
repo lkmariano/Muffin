@@ -1,8 +1,8 @@
 import type { Backlink, PageMetadata } from "../domain/page.js";
+import type { SiteIdentity } from "../config/loader.js";
 import { withBasePath } from "../../basePath.js";
 
 export interface RenderablePage {
-  // ADDED: slug — paired with metadata.pageType to build the body attributes.
   slug: string;
   title: string;
   content: string;
@@ -14,6 +14,7 @@ export function renderPage(
   page: RenderablePage,
   template: string,
   explorerHtml: string,
+  site: SiteIdentity,
   basePath = "",
 ): string {
   const listItems = (page.backlinks ?? [])
@@ -24,6 +25,7 @@ export function renderPage(
   : "";
   const cssHref = withBasePath(basePath, "/styles.css");
   const themeCssHref = withBasePath(basePath, "/theme.css");
+  const katexCssHref = withBasePath(basePath, "/katex/katex.min.css");
 
   const metaParts: string[] = [];
   if (page.metadata.status) {
@@ -32,22 +34,28 @@ export function renderPage(
   metaParts.push(`<span class="page-updated">Updated ${page.metadata.updated}</span>`);
   const pageMetaHtml = `<div class="page-meta">${metaParts.join("")}</div>`;
 
-  // ADDED: body attributes keyed off the page type + slug. These are the hooks
-  // the global stylesheet scopes layout rules on (e.g. body[data-page-type="home"]).
-  const bodyAttrs = `data-page-type="${escapeAttr(page.metadata.pageType)}" data-slug="${escapeAttr(page.slug)}"`;
+  const descriptionMeta =
+    site.description === undefined
+      ? ""
+      : `<meta name="description" content="${escapeAttr(site.description)}" />`;
+
+  const bodyAttrs = `data-slug="${escapeAttr(page.slug)}"`;
 
   return template
     .replaceAll("{{TITLE}}", page.title)
+    .replaceAll("{{LANG}}", escapeAttr(site.lang))
+    .replaceAll("{{SITE_TITLE}}", escapeAttr(site.title))
+    .replaceAll("{{SITE_DESCRIPTION}}", descriptionMeta)
     .replaceAll("{{BACKLINKS}}", backlinksHtml)
     .replaceAll("{{NAV}}", explorerHtml)
     .replaceAll("{{THEME_CSS}}", themeCssHref)
     .replaceAll("{{CSS}}", cssHref)
+    .replaceAll("{{KATEX_CSS}}", katexCssHref)
     .replaceAll("{{PAGE_META}}", pageMetaHtml)
     .replaceAll("{{BODY_ATTRS}}", bodyAttrs)
     .replaceAll("{{CONTENT}}", page.content);
 }
 
-// ADDED: escape attribute values so generated HTML can't be broken by quotes/angles.
 function escapeAttr(value: string): string {
   return value
     .replace(/&/g, "&amp;")

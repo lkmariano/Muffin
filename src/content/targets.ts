@@ -8,7 +8,7 @@ import type { ParsedMarkdown } from "./markdown.js";
 // Per-page reference targets. Separate from SiteGraph (page-to-page
 // relationships): this answers where a reference points within a page.
 export type PageTargetIndex = {
-  // slugged heading text (and duplicate-bearing anchor ids) → emitted anchor id
+  // slugged heading text → that heading's emitted anchor id
   headings: Record<string, string>;
   // logical block id (no leading `^`) → emitted anchor id (`^<id>`)
   blocks: Record<string, string>;
@@ -25,9 +25,6 @@ export function buildTargetIndex(parsed: ParsedMarkdown[]): TargetIndex {
       const anchor = node.data?.headingId;
       if (typeof anchor !== "string" || anchor === "") {
         return;
-      }
-      if (!(anchor in headings)) {
-        headings[anchor] = anchor;
       }
       const key = headingSlug(nodeText(node));
       if (!(key in headings)) {

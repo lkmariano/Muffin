@@ -52,15 +52,25 @@ export function nodeText(node: Node | undefined): string {
 }
 
 // Assigns a deterministic id to every heading in document order. Duplicate
-// slugs get -1, -2, ... suffixes. The id is stored on the node so the renderer
-// emits it directly (via `data.hProperties`).
+// slugs get -1, -2, ... suffixes. The per-base counter keeps pure-duplicate
+// groups at base, base-1, base-2, ...; a document-wide used set skips ids
+// already taken by other headings, so emitted ids are globally unique (a
+// later `# Heading 1` cannot collide with a duplicate `# Heading` that was
+// assigned `heading-1`). The id is stored on the node so the renderer emits
+// it directly (via `data.hProperties`).
 export function assignHeadingIds(tree: Root): void {
   const counts = new Map<string, number>();
+  const used = new Set<string>();
   visit(tree, "heading", (node: any) => {
     const base = headingSlug(nodeText(node));
-    const count = counts.get(base) ?? 0;
-    counts.set(base, count + 1);
-    const id = count === 0 ? base : `${base}-${count}`;
+    let index = counts.get(base) ?? 0;
+    let id = index === 0 ? base : `${base}-${index}`;
+    while (used.has(id)) {
+      index += 1;
+      id = `${base}-${index}`;
+    }
+    counts.set(base, index + 1);
+    used.add(id);
     node.data = {
       ...(node.data ?? {}),
       headingId: id,

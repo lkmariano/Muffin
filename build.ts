@@ -2,7 +2,9 @@ import { formatDate, getSlug, getTitle } from "./util.js";
 import { buildExplorerTree } from "./src/graph/navigation.js";
 import { renderExplorer } from "./src/rendering/explorer.js";
 import { loadContent } from "./src/content/loader.js";
+import { normalizeTags } from "./src/content/frontmatter.js";
 import { containsMath, parseMarkdown, renderMarkdownTree } from "./src/content/markdown.js";
+import { buildTargetIndex, resolveReferenceFragments } from "./src/content/targets.js";
 import { buildSiteGraph, resolveBacklinks } from "./src/graph/backlinks.js";
 import { writePages } from "./src/output/writer.js";
 import { copyAssets, writeStaticAssets } from "./src/output/assets.js";
@@ -36,9 +38,11 @@ async function parseFiles(
     }
   }
 
-  const graph = await buildSiteGraph(
-    contents.map((content) => ({ path: content.path, tree: trees[content.path]! })),
-  );
+  const parsed = contents.map((content) => ({ path: content.path, tree: trees[content.path]! }));
+  const targetIndex = buildTargetIndex(parsed);
+  resolveReferenceFragments(parsed, targetIndex);
+
+  const graph = await buildSiteGraph(parsed);
 
   for (const content of contents) {
     const slug = getSlug(content.path);
@@ -52,6 +56,7 @@ async function parseFiles(
         frontmatter: content.frontmatter,
         ...(typeof statusValue === "string" ? { status: statusValue } : {}),
         updated: formatDate(content.mtime),
+        tags: normalizeTags(content.frontmatter.tags),
       },
       content: await renderMarkdownTree(trees[content.path]!, basePath),
       backlinks: resolveBacklinks(graph, slug, slugMap, basePath),

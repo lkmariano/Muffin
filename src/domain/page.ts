@@ -4,6 +4,7 @@ export type PageMetadata = {
   frontmatter: Record<string, unknown>;
   status?: string;
   updated: string;
+  tags: string[];
 };
 
 export type Page = {

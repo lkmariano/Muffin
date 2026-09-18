@@ -9,6 +9,7 @@ import { visit } from "unist-util-visit";
 import { unified } from "unified";
 import { wikilinkPlugin, wikilinkToUrlPlugin } from "../../plugins/wikilinks.js";
 import { imageEmbedPlugin, imageEmbedUrlPlugin, imageEmbedAlt } from "../../plugins/image-embeds.js";
+import { blockIdPlugin, headingIdPlugin } from "./anchors.js";
 
 import type { Root } from "mdast";
 
@@ -43,7 +44,9 @@ export async function parseMarkdown(
     .use(remarkMath)
     .use(imageEmbedPlugin, assetPaths, currentFile)
     .use(wikilinkPlugin, slugMap, currentFile)
-    .use(ofmInlinePlugin);
+    .use(ofmInlinePlugin)
+    .use(headingIdPlugin)
+    .use(blockIdPlugin);
 
   const tree = parser.parse(body) as Root;
   return parser.run(tree) as Promise<Root>;
@@ -180,7 +183,7 @@ function toCallout(blockquote: any): void {
     bodyChildren.push({
       type: "element",
       tagName: "p",
-      properties: {},
+      properties: { ...(first.properties ?? {}) },
       children: reconstructedChildren,
     });
   }

@@ -21,6 +21,16 @@ const COMMENT_PATTERN = /%%[\s\S]*?%%/g;
 const HIGHLIGHT_PATTERN = /==([^=\n]+)==/g;
 const CALLOUT_PATTERN = /^\[!([A-Za-z]+)\]([+-]?)\s?(.*)$/;
 
+export function containsMath(tree: Root): boolean {
+  let found = false;
+  visit(tree, (node) => {
+    if (node.type === "math" || node.type === "inlineMath") {
+      found = true;
+    }
+  });
+  return found;
+}
+
 export async function parseMarkdown(
   body: string,
   slugMap: Record<string, string[]>,

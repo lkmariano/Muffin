@@ -6,6 +6,7 @@ import type { LoadedAsset } from "../content/loader.js";
 
 export interface WriteStaticAssetsOptions {
   outputRoot?: string;
+  hasMath?: boolean;
 }
 
 export function writeStaticAssets(
@@ -16,7 +17,11 @@ export function writeStaticAssets(
   fs.mkdirSync(outputRoot, { recursive: true });
   fs.copyFileSync("./templates/styles.css", path.join(outputRoot, "styles.css"));
   fs.writeFileSync(path.join(outputRoot, "theme.css"), generateThemeCss(theme), "utf-8");
-  copyKatexAssets(outputRoot);
+  if (options.hasMath === true) {
+    copyKatexAssets(outputRoot);
+  } else {
+    fs.rmSync(path.join(outputRoot, "katex"), { recursive: true, force: true });
+  }
 }
 
 export function copyKatexAssets(outputRoot: string): void {

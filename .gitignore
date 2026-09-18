@@ -1,6 +1,7 @@
 node_modules/
 .DS_Store
 /muffin/
+/tests/
 /.opencode/
 AGENTS.md
 ARCHITECTURE.md

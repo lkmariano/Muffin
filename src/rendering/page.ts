@@ -10,12 +10,17 @@ export interface RenderablePage {
   backlinks?: Backlink[];
 }
 
+export interface RenderPageOptions {
+  hasMath?: boolean;
+}
+
 export function renderPage(
   page: RenderablePage,
   template: string,
   explorerHtml: string,
   site: SiteIdentity,
   basePath = "",
+  options: RenderPageOptions = {},
 ): string {
   const listItems = (page.backlinks ?? [])
     .map((link) => `<li><a href="${link.href}">${link.title}</a></li>`)
@@ -25,7 +30,10 @@ export function renderPage(
   : "";
   const cssHref = withBasePath(basePath, "/styles.css");
   const themeCssHref = withBasePath(basePath, "/theme.css");
-  const katexCssHref = withBasePath(basePath, "/katex/katex.min.css");
+  const katexCss =
+    options.hasMath === true
+      ? `<link rel="stylesheet" href="${withBasePath(basePath, "/katex/katex.min.css")}">`
+      : "";
 
   const metaParts: string[] = [];
   if (page.metadata.status) {
@@ -50,7 +58,7 @@ export function renderPage(
     .replaceAll("{{NAV}}", explorerHtml)
     .replaceAll("{{THEME_CSS}}", themeCssHref)
     .replaceAll("{{CSS}}", cssHref)
-    .replaceAll("{{KATEX_CSS}}", katexCssHref)
+    .replaceAll("{{KATEX_CSS}}", katexCss)
     .replaceAll("{{PAGE_META}}", pageMetaHtml)
     .replaceAll("{{BODY_ATTRS}}", bodyAttrs)
     .replaceAll("{{CONTENT}}", page.content);

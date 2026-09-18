@@ -2,7 +2,7 @@ import { formatDate, getSlug, getTitle } from "./util.js";
 import { buildExplorerTree } from "./src/graph/navigation.js";
 import { renderExplorer } from "./src/rendering/explorer.js";
 import { loadContent } from "./src/content/loader.js";
-import { parseMarkdown, renderMarkdownTree } from "./src/content/markdown.js";
+import { containsMath, parseMarkdown, renderMarkdownTree } from "./src/content/markdown.js";
 import { buildSiteGraph, resolveBacklinks } from "./src/graph/backlinks.js";
 import { writePages } from "./src/output/writer.js";
 import { copyAssets, writeStaticAssets } from "./src/output/assets.js";
@@ -23,6 +23,7 @@ async function parseFiles(
   const assetPaths = assets.map((asset) => asset.relPath);
 
   const trees: Record<string, Root> = {};
+  let hasMath = false;
   for (const content of contents) {
     trees[content.path] = await parseMarkdown(
       content.body,
@@ -30,6 +31,9 @@ async function parseFiles(
       content.relPath,
       assetPaths,
     );
+    if (containsMath(trees[content.path]!)) {
+      hasMath = true;
+    }
   }
 
   const graph = await buildSiteGraph(
@@ -54,7 +58,7 @@ async function parseFiles(
     });
   }
 
-  return { parsedData, contents, assets };
+  return { parsedData, contents, assets, hasMath };
 }
 
 async function main(): Promise<void> {
@@ -63,7 +67,7 @@ async function main(): Promise<void> {
 
   console.log("Parsing markdown files...");
   try {
-    const { parsedData, contents, assets } = await parseFiles(
+    const { parsedData, contents, assets, hasMath } = await parseFiles(
       config.content.directory,
       config.content.exclude,
       config.site.basePath,
@@ -77,14 +81,14 @@ async function main(): Promise<void> {
       const template = loadPageTemplate();
       const outputPages = parsedData.map((page) => ({
         path: page.path,
-        renderedHtml: renderPage(page, template, explorerHtml, config.site, config.site.basePath),
+        renderedHtml: renderPage(page, template, explorerHtml, config.site, config.site.basePath, { hasMath }),
       }));
       writePages(outputPages, {
         ...(config.homepage === undefined ? {} : { homepage: config.homepage }),
         contentRoot: config.content.directory,
         outputRoot,
       });
-      writeStaticAssets(config.theme, { outputRoot });
+      writeStaticAssets(config.theme, { outputRoot, hasMath });
     }
     copyAssets(assets, { outputRoot });
   } catch (error) {

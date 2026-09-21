@@ -2,15 +2,28 @@
 <html lang="{{LANG}}">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{TITLE}}</title>
+    <!-- Marks JS as available before first paint so the burger drawer never
+         flashes; without JS the nav simply stays inline. -->
+    <script>document.documentElement.classList.add('js');</script>
     {{SITE_DESCRIPTION}}
     <link rel="stylesheet" href="{{THEME_CSS}}">
     <link rel="stylesheet" href="{{CSS}}">
     {{KATEX_CSS}}
   </head>
   <body {{BODY_ATTRS}}>
+    <header class="topbar">
+      <button type="button" class="burger" id="nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Toggle navigation">
+        <svg class="icon-open" viewBox="0 0 22 22" aria-hidden="true"><path d="M3 6h16M3 11h16M3 16h16"/></svg>
+        <svg class="icon-close" viewBox="0 0 22 22" aria-hidden="true"><path d="M5 5l12 12M17 5L5 17"/></svg>
+      </button>
+      <span class="topbar-title">{{SITE_TITLE}}</span>
+    </header>
+    <div class="backdrop" id="nav-backdrop"></div>
+
     <div class="page">
-      <nav>
+      <nav id="site-nav" aria-label="Site navigation">
         <div class="site-title">{{SITE_TITLE}}</div>
         <div class="nav-links">
           <button type="button" class="explorer-header" id="explorer-toggle-all" aria-expanded="true" aria-controls="explorer-content">
@@ -73,137 +86,122 @@
           }
           detail.addEventListener('toggle', function () {
             folders[key] = detail.open;
-            save();
             reflect();
+            save();
           });
         });
 
-        if (Object.prototype.hasOwnProperty.call(state, 'mobileCollapsed') &&
-            state.mobileCollapsed) {
-          content.classList.add('explorer-collapsed');
-        }
-
-        function isMobile() {
-          return !!(window.matchMedia &&
-            window.matchMedia('(max-width: 699px)').matches);
-        }
         function allFoldersOpen() {
           return details.every(function (detail) { return detail.open; });
         }
-        function isCollapsed() {
-          return content.classList.contains('explorer-collapsed');
-        }
         function reflect() {
-          toggle.setAttribute(
-            'aria-expanded',
-            String(isMobile() ? !isCollapsed() : allFoldersOpen())
-          );
+          toggle.setAttribute('aria-expanded', String(allFoldersOpen()));
         }
         function save() {
-          write({ folders: folders, mobileCollapsed: isCollapsed() });
+          write({ folders: folders });
         }
 
         toggle.addEventListener('click', function () {
-          if (isMobile()) {
-            content.classList.toggle('explorer-collapsed');
-            save();
-            reflect();
-            return;
-          }
           var next = !allFoldersOpen();
           details.forEach(function (detail) {
             var key = detail.getAttribute('data-folder-path');
             detail.open = next;
             if (key) folders[key] = next;
           });
-          save();
           reflect();
+          save();
         });
 
-        if (window.matchMedia) {
-          var query = window.matchMedia('(max-width: 699px)');
-          var onChange = function () { reflect(); };
-          if (typeof query.addEventListener === 'function') {
-            query.addEventListener('change', onChange);
-          } else if (typeof query.addListener === 'function') {
-            query.addListener(onChange);
-          }
-        }
         reflect();
       })();
     </script>
+    <!-- Burger drawer -->
+    <script>
+      (function () {
+        'use strict';
+        var btn = document.getElementById('nav-toggle');
+        var nav = document.getElementById('site-nav');
+        var backdrop = document.getElementById('nav-backdrop');
+        if (!btn || !nav || !backdrop) return;
+        if (!window.matchMedia) return;
+
+        var mq = window.matchMedia('(max-width: 899px)');
+
+        function setOpen(open) {
+          nav.classList.toggle('is-open', open);
+          backdrop.classList.toggle('is-open', open);
+          btn.setAttribute('aria-expanded', String(open));
+          document.body.classList.toggle('nav-locked', open);
+          if (open) {
+            var first = nav.querySelector('button, a[href], summary');
+            if (first) first.focus();
+          }
+        }
+        function isOpen() { return nav.classList.contains('is-open'); }
+
+        btn.addEventListener('click', function () { setOpen(!isOpen()); });
+        backdrop.addEventListener('click', function () { setOpen(false); });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && isOpen()) { setOpen(false); btn.focus(); }
+        });
+        // Navigating to another note closes the drawer.
+        nav.addEventListener('click', function (e) {
+          var a = e.target.closest ? e.target.closest('a[href]') : null;
+          if (a) setOpen(false);
+        });
+        // Resizing up to desktop must not leave the page scroll-locked.
+        var onChange = function () { if (!mq.matches) setOpen(false); };
+        if (mq.addEventListener) mq.addEventListener('change', onChange);
+        else if (mq.addListener) mq.addListener(onChange);
+      })();
+    </script>
+    <!-- TOC scroll-spy: headings you've scrolled through are 100%, the rest 50% -->
     <script>
       (function () {
         'use strict';
         var list = document.querySelector('.toc-list');
-        if (!list || typeof window.IntersectionObserver === 'undefined') return;
+        if (!list) return;
 
-        var entries = [];
-        var bandState = new Map();
+        var items = [];
         var seen = Object.create(null);
-        Array.prototype.forEach.call(
-          list.querySelectorAll('a[href^="#"]'),
-          function (link) {
-            var href = link.getAttribute('href') || '';
-            var id = href.slice(1);
-            if (!id || seen[id]) return;
-            seen[id] = true;
-            var heading = document.getElementById(id);
-            if (!heading) return;
-            entries.push({ heading: heading, link: link });
-            bandState.set(heading, false);
-          }
-        );
-        if (entries.length === 0) return;
-
-        var lastEntry = entries[entries.length - 1];
-        var lastVisible = false;
-
-        function clear() {
-          entries.forEach(function (entry) {
-            entry.link.classList.remove('is-active');
-          });
-          list.classList.remove('has-active');
-        }
-        function activate(heading) {
-          entries.forEach(function (entry) {
-            entry.link.classList.toggle('is-active', entry.heading === heading);
-          });
-          list.classList.add('has-active');
-        }
-        function recompute() {
-          var best = null;
-          var bestTop = Infinity;
-          bandState.forEach(function (inBand, heading) {
-            if (!inBand) return;
-            var top = heading.getBoundingClientRect().top;
-            if (top < bestTop) { bestTop = top; best = heading; }
-          });
-          if (best) { activate(best); return; }
-          if (lastVisible) { activate(lastEntry.heading); return; }
-          clear();
-        }
-
-        var bandObserver = new window.IntersectionObserver(function (entriesList) {
-          entriesList.forEach(function (entry) {
-            bandState.set(entry.target, entry.isIntersecting);
-          });
-          recompute();
-        }, { rootMargin: '0px 0px -70% 0px' });
-
-        var lastObserver = new window.IntersectionObserver(function (entriesList) {
-          entriesList.forEach(function (entry) {
-            if (entry.target === lastEntry.heading) {
-              lastVisible = entry.isIntersecting;
-            }
-          });
-          recompute();
+        Array.prototype.forEach.call(list.querySelectorAll('a[href^="#"]'), function (link) {
+          var id = (link.getAttribute('href') || '').slice(1);
+          try { id = decodeURIComponent(id); } catch (e) { /* keep raw id */ }
+          if (!id || seen[id]) return;
+          seen[id] = true;
+          var heading = document.getElementById(id);
+          if (heading) items.push({ heading: heading, link: link });
         });
+        if (items.length === 0) return;
 
-        entries.forEach(function (entry) {
-          bandObserver.observe(entry.heading);
-        });
-        lastObserver.observe(lastEntry.heading);
+        list.classList.add('has-spy'); // JS is running → dim by default
+
+        var ticking = false;
+        function update() {
+          ticking = false;
+          var line = window.innerHeight * 0.3; // same 30% band the old observer used
+          var doc = document.documentElement;
+          var scrollable = doc.scrollHeight > window.innerHeight + 2;
+          var atBottom = scrollable && window.innerHeight + window.scrollY >= doc.scrollHeight - 2;
+
+          var current = -1;
+          items.forEach(function (item, i) {
+            var passed = atBottom || item.heading.getBoundingClientRect().top <= line;
+            item.link.classList.toggle('is-passed', passed);
+            if (passed) current = i;
+          });
+          items.forEach(function (item, i) {
+            if (i === current) item.link.setAttribute('aria-current', 'location');
+            else item.link.removeAttribute('aria-current');
+          });
+        }
+        function schedule() {
+          if (!ticking) { ticking = true; window.requestAnimationFrame(update); }
+        }
+
+        window.addEventListener('scroll', schedule, { passive: true });
+        window.addEventListener('resize', schedule);
+        update();
       })();
     </script>
   </body>

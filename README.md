@@ -18,8 +18,9 @@ Point Muffin at a `content/` folder of markdown files and it will:
 - render GFM, KaTeX math (emitted only when the vault contains math), callouts, highlights/comments, and `[[note#Heading]]`/`[[note#^block-id]]` references
 - render a per-page table of contents (H1–H3) and a backlinks section in the right-sidebar
 - highlight the current page and its ancestor folders in the Explorer (server-rendered, `aria-current`)
-- persist Explorer folder state and mobile collapse across visits (`localStorage`, scoped per `basePath`)
-- highlight the active TOC heading while scrolling with an on-page scroll-spy (IntersectionObserver)
+- persist Explorer folder state across visits (`localStorage`, scoped per `basePath`)
+- highlight scrolled-through TOC headings (dimmed until passed) with an on-page scroll-spy
+- collapse the Explorer into a `≤899px` off-canvas drawer nav with a burger button on the top bar
 - mark keyboard focus site-wide and give `focus-visible` a visible ring
 
 ## Zero Configuration
@@ -113,6 +114,6 @@ because rendering mutates the shared markdown AST.
 
 Each page renders through `templates/page.html`. The `<body>` carries `data-slug`, `data-relpath` (the page's canonical identity, used for current-page highlighting and also read by the Explorer persistence script) and `data-base-path` scoping hooks for site CSS and storage keys. The page type concept from earlier phases was removed — Muffin does not ship site-specific page types such as "portfolio" or "home". Pages render from a generic `PresentationContext` (page + site identity + basePath), so templates never touch raw build data; the three-column layout, per-page TOC, and backlinks all follow `DESIGN.md`.
 
-The template ships two tiny standalone client scripts: one persists Explorer state (folder `details` toggles + the mobile collapse, keyed as `muffin:explorer:v1:{basePath}`), and one drives the TOC scroll-spy (`is-active`/`has-active`). Current-page highlighting needs no script — it is rendered per page at build time. All storage access is wrapped in try/catch so the page works even when storage is unavailable.
+The template ships three tiny standalone client scripts (all gated so the page works without JS): one persists Explorer folder `details` state (keyed as `muffin:explorer:v1:{basePath}`), one opens the `≤899px` burger drawer, and one drives the TOC scroll-spy (`.has-spy`/`.is-passed`, `aria-current="location"`). Current-page highlighting needs no script — it is rendered per page at build time. All storage access is wrapped in try/catch so the page works even when storage is unavailable.
 
 Template tokens: `{{TITLE}}`, `{{CONTENT}}`, `{{TOC}}`, `{{BACKLINKS}}`, `{{NAV}}`, `{{CSS}}`, `{{THEME_CSS}}`, `{{KATEX_CSS}}`, `{{PAGE_META}}`, `{{SITE_TITLE}}`, `{{LANG}}`, `{{SITE_DESCRIPTION}}`, `{{BODY_ATTRS}}`.

@@ -22,8 +22,11 @@ body {
   background-color: var(--color-background);
 }
 
-/* Visible keyboard focus (DESIGN.md §13). Overrides float so controls that
-   previously used `all: unset` keep a discernible keyboard indication. */
+body.nav-locked {
+  overflow: hidden;
+}
+
+/* Visible keyboard focus (DESIGN.md §13). */
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
@@ -33,7 +36,19 @@ a {
   color: var(--color-link);
 }
 
-/* ---------- Three-column desktop layout (DESIGN.md §5, §7.1) ---------- */
+/* ---------- Three-column desktop layout (DESIGN.md §5) ----------
+   ALIGNMENT SYSTEM (from muffin-v1-preview.html):
+   1. One top edge — every column starts at --layout-page-top and the
+      grid uses `align-items: first baseline`, so the first line of the
+      left column ("Muffin"), the page title, and the first heading of the
+      right column (TOC header, or Backlinks if there's no TOC) sit on the
+      same baseline. To fall back to plain top-alignment use `start`.
+   2. Fixed column edges — 159 | 399 | 1149; nothing is centred.
+   3. Vertical rhythm — 5px label↔sub-label, 10px heading↔content,
+      20px block↔block, 50px major section.
+   5. One chevron system — 1px stroke, 25px header boxes, 15px folder
+      boxes, always placed right after the label.
+   6. One hover language — sidebar links go accent; Backlinks underline. */
 
 .page {
   min-height: 100vh;
@@ -42,10 +57,16 @@ a {
     var(--layout-nav-width)
     minmax(0, var(--layout-main-width))
     minmax(0, var(--layout-aside-width));
-  align-items: start;
+  align-items: first baseline;
   justify-content: start;
   column-gap: var(--spacing-7);
-  padding: var(--spacing-7) 0 0 var(--layout-sidebar-inset);
+  padding: var(--layout-page-top) 0 0 var(--layout-sidebar-inset);
+}
+
+/* Burger bar + backdrop: hidden on desktop. */
+.topbar,
+.backdrop {
+  display: none;
 }
 
 /* ---------- Left column: site title + Explorer (§6.1) ---------- */
@@ -53,8 +74,12 @@ a {
 nav {
   min-width: 0;
   position: sticky;
-  top: var(--spacing-7);
-  padding-top: var(--spacing-3);
+  top: var(--layout-page-top);
+  max-height: calc(100vh - var(--layout-page-top) - var(--spacing-4));
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding-inline: 3px; /* keeps focus rings from being clipped */
+  margin-inline: -3px;
 }
 
 .site-title {
@@ -69,7 +94,7 @@ nav {
   all: unset;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--spacing-3);
   cursor: pointer;
   width: 100%;
@@ -102,12 +127,14 @@ nav {
 }
 
 .explorer-chevron {
-  width: 15px;
-  height: 15px;
+  flex: none;
+  width: var(--tree-chevron);
+  height: var(--tree-chevron);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: transform 0.15s ease;
+  transform: rotate(-90deg);
 }
 
 .explorer-chevron svg {
@@ -124,12 +151,7 @@ svg.chevron {
   overflow: visible;
 }
 
-/* Down-pointing glyph: collapsed = rotated -90deg, open = as drawn. */
 .explorer-header[aria-expanded="false"] .explorer-header-chevron {
-  transform: rotate(-90deg);
-}
-
-.explorer-chevron {
   transform: rotate(-90deg);
 }
 
@@ -137,8 +159,21 @@ nav details[open] > summary .explorer-chevron {
   transform: none;
 }
 
+/* Explorer tree — compact + aligned.
+   Geometry (all labels share ONE left edge per depth):
+     [chevron 15px][gap 10px][label]  → label starts at 25px
+   • root notes get 25px left padding, so they line up with folder labels
+   • nested lists sit 25px further in, so child labels line up with the
+     parent folder's label
+   • the tree line runs down the centre of the parent's chevron */
+.nav-links {
+  --tree-chevron: 15px;
+  --tree-gap: var(--spacing-3);
+  --tree-row-pad: var(--spacing-1); /* tighter rows */
+}
+
 .explorer-content {
-  padding: var(--spacing-4) 0;
+  padding: calc(var(--spacing-3) - var(--tree-row-pad)) 0; /* 10px to first label */
 }
 
 .nav-links ul {
@@ -147,11 +182,10 @@ nav details[open] > summary .explorer-chevron {
   padding: 0;
 }
 
-/* Tree line: 0.4px stroke in `colors.text`; nested levels indent by 27px. */
 .nav-links ul ul {
-  padding-left: var(--spacing-6);
+  margin-left: calc(var(--tree-chevron) / 2);
+  padding-left: calc(var(--tree-chevron) / 2 + var(--tree-gap));
   border-left: 0.4px solid var(--color-text);
-  margin-left: 7px;
 }
 
 nav li {
@@ -164,7 +198,17 @@ nav a {
   color: var(--color-text);
   text-decoration: none;
   display: block;
-  padding: var(--spacing-2) 0;
+  padding: var(--tree-row-pad) 0;
+}
+
+/* Un-nested notes: indent past the (absent) chevron so labels align. */
+.explorer-content > ul > li > a {
+  padding-left: calc(var(--tree-chevron) + var(--tree-gap));
+}
+
+nav a,
+nav summary {
+  transition: color 0.15s ease;
 }
 
 nav a:hover,
@@ -172,8 +216,7 @@ nav summary:hover {
   color: var(--color-accent);
 }
 
-/* Current note stays normal text — never a filled background/pill (§5.2,
-   DESIGN.md §12). */
+/* Current note stays normal text — never a filled background/pill (§5.2). */
 nav a[aria-current="page"] {
   color: var(--color-text);
 }
@@ -186,10 +229,10 @@ nav li.explorer-active-folder > details > summary {
 nav summary {
   display: flex;
   align-items: center;
-  gap: var(--spacing-3);
+  gap: var(--tree-gap);
   cursor: pointer;
   list-style: none;
-  padding: var(--spacing-2) 0;
+  padding: var(--tree-row-pad) 0;
   font-size: var(--typography-size-md);
   font-weight: 700;
 }
@@ -302,11 +345,10 @@ main {
 aside {
   min-width: 0;
   position: sticky;
-  top: var(--spacing-7);
+  top: var(--layout-page-top);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-7);
-  padding-top: var(--spacing-3);
+  gap: 0; /* spacing lives on .toc (see below) */
 }
 
 .aside-title {
@@ -315,14 +357,30 @@ aside {
   margin: 0 0 var(--spacing-3) 0;
 }
 
-/* TOC header is a <summary> so it collapses without JS. */
+/* TOC header is a <summary> so it collapses without JS.
+   Backlinks close up when the TOC is collapsed: expanded 50px between TOC
+   and Backlinks, collapsed 20px with the header's bottom margin dropped.
+   Needs :has() (all current browsers; older ones keep the 50px gap). */
+.toc {
+  margin-bottom: var(--spacing-7);
+}
+
+.toc:has(> details:not([open])) {
+  margin-bottom: var(--spacing-4);
+}
+
 .toc details > summary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: var(--spacing-3);
   cursor: pointer;
   list-style: none;
   margin-bottom: var(--spacing-3);
+}
+
+.toc details:not([open]) > summary {
+  margin-bottom: 0;
 }
 
 .toc details > summary::-webkit-details-marker {
@@ -348,6 +406,10 @@ aside {
   margin-bottom: var(--spacing-3);
 }
 
+.toc-list li:last-child {
+  margin-bottom: 0; /* no stray 10px before Backlinks */
+}
+
 .toc-depth-2 {
   padding-left: var(--spacing-3);
 }
@@ -360,24 +422,32 @@ aside {
   font-size: var(--typography-size-sm);
   color: var(--color-text);
   text-decoration: none;
+  transition: color 0.15s ease;
 }
 
-/* Active TOC state: muted inactive entries only while an active heading
-   exists; the active entry returns to normal text (DESIGN.md §6.3, §12). */
-.toc-list.has-active a {
+/* TOC states.
+   No JS:  every entry is full color (nothing is dimmed).
+   With JS: `.has-spy` dims every entry to 50%, and `.is-passed` returns
+            each heading you've scrolled through to 100%. */
+.toc-list.has-spy a {
   color: var(--color-muted);
 }
 
-.toc-list.has-active a.is-active {
+.toc-list.has-spy a.is-passed {
   color: var(--color-text);
 }
 
-.toc-list a:hover {
-  text-decoration: underline;
+.toc-list a:hover,
+.toc-list.has-spy a:hover {
+  color: var(--color-accent);
+}
+
+.backlinks .aside-title {
+  margin-bottom: calc(var(--spacing-3) - var(--spacing-1)); /* 10px to first link */
 }
 
 .backlinks-list li {
-  margin-bottom: var(--spacing-1);
+  padding: var(--spacing-1) 0; /* same 4px pitch as tree rows */
 }
 
 .backlinks-list a {
@@ -499,7 +569,7 @@ th {
 
 /* ---------- Responsive arrangement (§7) ---------- */
 
-/* Tablet: 700px–1099px — nav + content, secondary sections below. */
+/* Tablet: 900px–1099px — nav + content, aside drops below. */
 @media (max-width: 1099px) {
   .page {
     grid-template-columns: var(--layout-nav-width) minmax(0, 1fr);
@@ -509,42 +579,149 @@ th {
   aside {
     grid-column: 1 / -1;
     position: static;
-    gap: var(--spacing-4);
     padding-top: var(--spacing-6);
+  }
+
+  .toc {
+    margin-bottom: var(--spacing-4);
+  }
+
+  nav {
+    top: var(--spacing-4);
+    max-height: calc(100vh - var(--spacing-4) * 2);
   }
 }
 
-/* Mobile: < 700px — single column; 20px horizontal padding. */
-@media (max-width: 699px) {
+/* Burger nav below 900px (replaces the old <700px stacking).
+   Content would be < ~480px wide beside the 190px nav, so the Explorer
+   moves into an off-canvas drawer opened from a top bar. Everything
+   drawer-related is gated on `.js`, so without JS the Explorer just stays
+   inline above the content. */
+@media (max-width: 899px) {
   .page {
     display: block;
-    padding: var(--spacing-4);
+    padding: 0 var(--spacing-4) var(--spacing-4);
   }
 
-  nav,
-  aside,
   main {
-    position: static;
-    width: 100%;
-  }
-
-  .site-title,
-  .content > h1:first-child {
-    font-size: 32px;
-  }
-
-  /* Mobile Explorer collapse: hides only the tree, keeps the heading/toggle. */
-  .explorer-content.explorer-collapsed {
-    display: none;
-  }
-
-  .nav-links > .explorer-content > ul {
-    padding: var(--spacing-4) 0;
+    padding-top: var(--spacing-4);
   }
 
   aside {
-    flex-direction: column;
-    gap: var(--spacing-4);
-    padding-top: var(--spacing-6);
+    padding-top: var(--spacing-4);
+  }
+
+  /* No-JS fallback: plain inline block, never sticky. */
+  nav {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+
+  aside {
+    position: static;
+  }
+
+  .js .topbar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin: 0 calc(var(--spacing-4) * -1); /* full-bleed inside padded .page */
+    padding: var(--spacing-3) var(--spacing-4);
+    background: var(--color-background);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .burger {
+    all: unset;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text);
+  }
+
+  .burger:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .burger svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+
+  .burger .icon-close {
+    display: none;
+  }
+
+  .burger[aria-expanded="true"] .icon-open {
+    display: none;
+  }
+
+  .burger[aria-expanded="true"] .icon-close {
+    display: block;
+  }
+
+  .topbar-title {
+    font-size: var(--typography-size-xl);
+    font-weight: var(--typography-heading-weight);
+    color: var(--color-accent);
+  }
+
+  /* Drawer */
+  .js nav {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    width: min(320px, 85vw);
+    max-height: none;
+    margin: 0;
+    padding: var(--spacing-4);
+    overflow-y: auto;
+    background: var(--color-background);
+    border-right: 1px solid var(--color-border);
+    transform: translateX(-100%);
+    visibility: hidden; /* keeps closed drawer out of tab order */
+    transition: transform 0.2s ease, visibility 0s linear 0.2s;
+  }
+
+  .js nav.is-open {
+    transform: none;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  .js nav .site-title {
+    display: none; /* title lives in the top bar */
+  }
+
+  .js .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .js .backdrop.is-open {
+    opacity: 1;
+    pointer-events: auto;
   }
 }

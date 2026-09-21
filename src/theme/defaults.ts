@@ -51,6 +51,7 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
     navWidth: "190px",
     asideWidth: "181px",
     sidebarInset: "159px",
+    pageTop: "calc(var(--spacing-7) + var(--spacing-3))",
   },
   radius: {
     sm: "0",

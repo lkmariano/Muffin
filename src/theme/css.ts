@@ -49,6 +49,8 @@ export type LayoutTokens = {
   navWidth: string;
   asideWidth: string;
   sidebarInset: string;
+  /** One top edge shared by all three columns (DESIGN.md §5). */
+  pageTop: string;
 };
 
 export type RadiusTokens = {

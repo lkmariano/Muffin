@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Welcome to Muffin</title>
+  <!-- PREVIEW ONLY: real Muffin must ship the font itself (checklist 4.4). -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600;700&display=swap" />
+
+  <!-- PORT → page.html <head>: marks JS as available before first paint so the
+       burger drawer never flashes. Without JS the nav simply stays inline. -->
+  <script>document.documentElement.classList.add('js');</script>
+
+  <style>
+    /* ============================================================
+       1. TOKENS — in Muffin these come from theme.css (defaults.ts)
+       ============================================================ */
+    :root {
+      --color-background: #1A1D23;
+      --color-text: #E6EDF3;
+      --color-accent: #6BEFA9;
+      --color-link: #6BEFA9;
+      --color-border: rgba(230, 237, 243, 0.3);
+      /* Keep only the name your theme.css actually emits. */
+      --color-text-muted: rgba(230, 237, 243, 0.5);
+      --color-muted: rgba(230, 237, 243, 0.5);
+
+      --typography-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --typography-heading: var(--typography-body);
+      --typography-base-size: 14px;
+      --typography-line-height: 1.2;
+      --typography-weight: 400;
+      --typography-heading-weight: 700;
+      --typography-size-xs: 12px;
+      --typography-size-sm: 14px;
+      --typography-size-md: 16px;
+      --typography-size-lg: 20px;
+      --typography-size-xl: 22px;
+      --typography-size-2xl: 38px;
+
+      --spacing-1: 2px;
+      --spacing-2: 5px;
+      --spacing-3: 10px;
+      --spacing-4: 20px;
+      --spacing-5: 25px;
+      --spacing-6: 27px;
+      --spacing-7: 50px;
+
+      --layout-sidebar-inset: 159px;
+      --layout-nav-width: 190px;
+      --layout-main-width: 700px;
+      --layout-content-width: 630px;
+      --layout-aside-width: 181px;
+      --layout-page-top: calc(var(--spacing-7) + var(--spacing-3));   /* 60px: one top edge for all 3 columns */
+    }
+
+    /* ============================================================
+       2. BASE + DESKTOP LAYOUT
+       ============================================================ */
+    * { box-sizing: border-box; }
+    html { font-size: var(--typography-base-size); }
+    body {
+      margin: 0;
+      font-family: var(--typography-body);
+      font-size: var(--typography-base-size);
+      font-weight: var(--typography-weight);
+      line-height: var(--typography-line-height);
+      letter-spacing: 0;
+      color: var(--color-text);
+      background-color: var(--color-background);
+    }
+    body.nav-locked { overflow: hidden; }
+    :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+    a { color: var(--color-link); }
+
+    /* ------------------------------------------------------------
+       ALIGNMENT SYSTEM (read this first)
+       1. One top edge  — every column starts at --layout-page-top and the
+          grid uses `align-items: first baseline`, so the first line of
+          the left column ("Muffin"), the page title, and the first heading
+          of the right column (TOC header, or Backlinks if there's no TOC)
+          sit on the same baseline. To fall back to plain top-alignment,
+          change it to `align-items: start`.
+       2. Fixed column edges — 159 | 399 | 1149. Each column's content
+          starts flush at its own edge; nothing is centred.
+       3. Vertical rhythm — gaps come from four steps only:
+            5px  label ↔ sub-label (title → Explorer, title → meta row)
+            10px heading → its content (all three sidebar headings)
+            20px block ↔ block (paragraphs, sections, collapsed TOC → Backlinks)
+            50px major section (TOC → Backlinks, open)
+       4. One row pitch per list type — tree rows and Backlinks share a 4px
+          pitch; TOC entries get 10px because they wrap onto two lines.
+       5. One chevron system — 1px stroke, vertically centred on the label,
+          always placed right after the label (25px box for section
+          headers, 15px box for folders).
+       6. One hover language — sidebar links go accent; Backlinks (already
+          accent) underline instead.
+       ------------------------------------------------------------ */
+    .page {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns:
+        var(--layout-nav-width)
+        minmax(0, var(--layout-main-width))
+        minmax(0, var(--layout-aside-width));
+      align-items: first baseline;
+      justify-content: start;
+      column-gap: var(--spacing-7);
+      padding: var(--layout-page-top) 0 0 var(--layout-sidebar-inset);
+    }
+
+    /* burger bar + backdrop: hidden on desktop */
+    .topbar, .backdrop { display: none; }
+
+    /* ---- left column ---- */
+    nav {
+      min-width: 0;
+      position: sticky; top: var(--layout-page-top);
+      max-height: calc(100vh - var(--layout-page-top) - var(--spacing-4));
+      overflow-y: auto; scrollbar-width: thin;
+      padding-inline: 3px; margin-inline: -3px;      /* keeps focus rings from being clipped */
+    }
+    .site-title {
+      font-size: var(--typography-size-2xl);
+      font-weight: var(--typography-heading-weight);
+      color: var(--color-accent);
+      margin-bottom: var(--spacing-2);
+    }
+    .explorer-header {
+      all: unset;
+      display: flex; align-items: center; justify-content: flex-start;
+      gap: var(--spacing-3); cursor: pointer; width: 100%;
+    }
+    .explorer-header:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+    .explorer-title { font-size: var(--typography-size-lg); font-weight: var(--typography-heading-weight); }
+
+    .explorer-header-chevron, .aside-chevron {
+      width: 25px; height: 25px; display: inline-flex; align-items: center; justify-content: center;
+    }
+    .explorer-header-chevron svg, .aside-chevron svg { width: 12.5px; height: 6.25px; }
+    .explorer-chevron {
+      flex: none; width: var(--tree-chevron); height: var(--tree-chevron);
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: transform .15s ease; transform: rotate(-90deg);
+    }
+    .explorer-chevron svg { width: 7.5px; height: 3.75px; }
+    svg.chevron { fill: none; stroke: currentColor; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+    .explorer-header[aria-expanded="false"] .explorer-header-chevron { transform: rotate(-90deg); }
+    nav details[open] > summary .explorer-chevron { transform: none; }
+
+    /* Explorer tree — compact + aligned.
+       Geometry (all labels share ONE left edge per depth):
+         [chevron 15px][gap 10px][label]  → label starts at 25px
+       • root notes get 25px left padding, so they line up with folder labels
+       • nested lists sit 25px further in, so child labels line up with the
+         parent folder's label
+       • the tree line runs down the centre of the parent's chevron */
+    .nav-links {
+      --tree-chevron: 15px;
+      --tree-gap: var(--spacing-3);
+      --tree-row-pad: var(--spacing-1);            /* was spacing-2 → tighter rows */
+    }
+    .explorer-content { padding: calc(var(--spacing-3) - var(--tree-row-pad)) 0; }   /* 10px to first label */
+    .nav-links ul { list-style: none; margin: 0; padding: 0; }
+    .nav-links ul ul {
+      margin-left: calc(var(--tree-chevron) / 2);
+      padding-left: calc(var(--tree-chevron) / 2 + var(--tree-gap));
+      border-left: 0.4px solid var(--color-text);
+    }
+    nav li { margin: 0; }
+    nav a {
+      font-size: var(--typography-size-md); font-weight: 700;
+      color: var(--color-text); text-decoration: none;
+      display: block; padding: var(--tree-row-pad) 0;
+    }
+    /* un-nested notes: indent past the (absent) chevron so labels align */
+    .explorer-content > ul > li > a {
+      padding-left: calc(var(--tree-chevron) + var(--tree-gap));
+    }
+    nav a, nav summary { transition: color .15s ease; }
+    nav a:hover, nav summary:hover { color: var(--color-accent); }
+    nav li.explorer-active-folder > details > summary { color: var(--color-accent); }
+    nav summary {
+      display: flex; align-items: center; gap: var(--tree-gap);
+      cursor: pointer; list-style: none; padding: var(--tree-row-pad) 0;
+      font-size: var(--typography-size-md); font-weight: 700;
+    }
+    nav summary::-webkit-details-marker { display: none; }
+    nav footer { margin-top: var(--spacing-4); font-size: var(--typography-size-xs); color: var(--color-text-muted); }
+
+    /* ---- middle column ---- */
+    main { min-width: 0; }
+    .content { max-width: var(--layout-content-width); margin: 0; padding-bottom: var(--spacing-7); overflow-x: auto; }
+    .content > h1:first-child { font-size: var(--typography-size-2xl); font-weight: var(--typography-heading-weight); margin: 0 0 var(--spacing-2) 0; }
+    .page-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--spacing-3); font-size: var(--typography-size-sm); margin-bottom: var(--spacing-5); }
+    .content h1, .content h2, .content h3 { font-weight: var(--typography-heading-weight); margin: var(--spacing-4) 0 var(--spacing-3) 0; }
+    .content h1:not(:first-child) { font-size: var(--typography-size-xl); }
+    .content h2 { font-size: var(--typography-size-lg); }
+    .content h3 { font-size: var(--typography-size-md); }
+    .content p { margin: 0 0 var(--spacing-4) 0; }
+
+    /* ---- right column ---- */
+    aside {
+      min-width: 0; position: sticky; top: var(--layout-page-top);
+      display: flex; flex-direction: column;
+      gap: 0;                                   /* spacing lives on .toc (see below) */
+    }
+    .aside-title { font-size: var(--typography-size-md); font-weight: var(--typography-heading-weight); margin: 0 0 var(--spacing-3) 0; }
+
+    /* CHANGE 1 — Backlinks close up when the TOC is collapsed.
+       Expanded: 50px between TOC and Backlinks. Collapsed: 20px, and the
+       header's own bottom margin is dropped. Needs :has() (all current
+       browsers; older ones keep the 50px gap, nothing breaks). */
+    .toc { margin-bottom: var(--spacing-7); }
+    .toc:has(> details:not([open])) { margin-bottom: var(--spacing-4); }
+    .toc details > summary {
+      display: flex; align-items: center; justify-content: flex-start;
+      gap: var(--spacing-3);
+      cursor: pointer; list-style: none; margin-bottom: var(--spacing-3);
+    }
+    .toc details:not([open]) > summary { margin-bottom: 0; }
+    .toc details > summary::-webkit-details-marker { display: none; }
+    .toc details > summary .aside-title { margin: 0; }
+    .toc details:not([open]) > summary .aside-chevron { transform: rotate(-90deg); }
+
+    .toc-list, .backlinks-list { list-style: none; margin: 0; padding: 0; }
+    .toc-list li { margin-bottom: var(--spacing-3); }
+    .toc-list li:last-child { margin-bottom: 0; }      /* no stray 10px before Backlinks */
+    .toc-depth-2 { padding-left: var(--spacing-3); }
+    .toc-depth-3 { padding-left: calc(var(--spacing-3) * 2); }
+    .toc-list a { font-size: var(--typography-size-sm); color: var(--color-text); text-decoration: none; transition: color .15s ease; }
+
+    /* CHANGE 3 — TOC states.
+       No JS:   every entry is full color (nothing is dimmed).
+       With JS: `.has-spy` dims every entry to 50%, and `.is-passed` returns
+                each heading you've scrolled through to 100%. */
+    .toc-list.has-spy a { color: var(--color-text-muted); }
+    .toc-list.has-spy a.is-passed { color: var(--color-text); }
+    .toc-list a:hover, .toc-list.has-spy a:hover { color: var(--color-accent); }
+
+    .backlinks .aside-title { margin-bottom: calc(var(--spacing-3) - var(--spacing-1)); }   /* 10px to first link */
+    .backlinks-list li { padding: var(--spacing-1) 0; }                                      /* same 4px pitch as tree rows */
+    .backlinks-list a { font-size: var(--typography-size-sm); font-weight: 600; color: var(--color-link); text-decoration: none; }
+    .backlinks-list a:hover { text-decoration: underline; }
+
+    /* ============================================================
+       3. RESPONSIVE
+       ============================================================ */
+
+    /* Tablet: aside drops below the content. */
+    @media (max-width: 1099px) {
+      .page {
+        grid-template-columns: var(--layout-nav-width) minmax(0, 1fr);
+        padding: var(--spacing-4) var(--spacing-4) 0 var(--layout-sidebar-inset);
+      }
+      aside { grid-column: 1 / -1; position: static; padding-top: var(--spacing-6); }
+      .toc { margin-bottom: var(--spacing-4); }
+      nav { top: var(--spacing-4); max-height: calc(100vh - var(--spacing-4) * 2); }
+    }
+
+    /* CHANGE 2 — Burger nav below 900px (replaces the old <700px stacking).
+       Content would be < ~480px wide beside the 190px nav, so the Explorer
+       moves into an off-canvas drawer opened from a top bar.
+       Everything drawer-related is gated on `.js`, so without JS the Explorer
+       just stays inline above the content. */
+    @media (max-width: 899px) {
+      .page { display: block; padding: 0 var(--spacing-4) var(--spacing-4); }
+      main { padding-top: var(--spacing-4); }
+      aside { padding-top: var(--spacing-4); }
+      /* No-JS fallback: the Explorer is a plain inline block, never sticky. */
+      nav { position: static; max-height: none; overflow: visible; margin-inline: 0; padding-inline: 0; }
+      aside { position: static; }
+
+      .js .topbar {
+        display: flex; align-items: center; gap: var(--spacing-3);
+        position: sticky; top: 0; z-index: 20;
+        margin: 0 calc(var(--spacing-4) * -1);       /* full-bleed inside padded .page */
+        padding: var(--spacing-3) var(--spacing-4);
+        background: var(--color-background);
+        border-bottom: 1px solid var(--color-border);
+      }
+      .burger {
+        all: unset; cursor: pointer;
+        width: 40px; height: 40px;
+        display: inline-flex; align-items: center; justify-content: center;
+        color: var(--color-text);
+      }
+      .burger:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+      .burger svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+      .burger .icon-close { display: none; }
+      .burger[aria-expanded="true"] .icon-open { display: none; }
+      .burger[aria-expanded="true"] .icon-close { display: block; }
+      .topbar-title { font-size: var(--typography-size-xl); font-weight: var(--typography-heading-weight); color: var(--color-accent); }
+
+      /* Drawer */
+      .js nav {
+        position: fixed; top: 0; bottom: 0; left: 0; z-index: 40;
+        width: min(320px, 85vw);
+        max-height: none; margin: 0;
+        padding: var(--spacing-4);
+        overflow-y: auto;
+        background: var(--color-background);
+        border-right: 1px solid var(--color-border);
+        transform: translateX(-100%);
+        visibility: hidden;                              /* keeps closed drawer out of tab order */
+        transition: transform .2s ease, visibility 0s linear .2s;
+      }
+      .js nav.is-open { transform: none; visibility: visible; transition-delay: 0s; }
+      .js nav .site-title { display: none; }             /* title lives in the top bar */
+
+      .js .backdrop {
+        display: block; position: fixed; inset: 0; z-index: 30;
+        background: rgba(0, 0, 0, 0.5);
+        opacity: 0; pointer-events: none; transition: opacity .2s ease;
+      }
+      .js .backdrop.is-open { opacity: 1; pointer-events: auto; }
+    }
+  </style>
+</head>
+<body data-slug="welcome-to-muffin">
+
+  <!-- PORT → page.html: add the top bar + backdrop just inside <body>,
+       and give <nav> the id + aria-label below. -->
+  <header class="topbar">
+    <button type="button" class="burger" id="nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Toggle navigation">
+      <svg class="icon-open" viewBox="0 0 22 22" aria-hidden="true"><path d="M3 6h16M3 11h16M3 16h16"/></svg>
+      <svg class="icon-close" viewBox="0 0 22 22" aria-hidden="true"><path d="M5 5l12 12M17 5L5 17"/></svg>
+    </button>
+    <span class="topbar-title">Muffin</span>   <!-- {{SITE_TITLE}} -->
+  </header>
+  <div class="backdrop" id="nav-backdrop"></div>
+
+  <div class="page">
+
+    <nav id="site-nav" aria-label="Site navigation">
+      <div class="site-title">Muffin</div>
+      <div class="nav-links">
+        <button type="button" class="explorer-header" id="explorer-toggle-all" aria-expanded="true" aria-controls="explorer-content">
+          <span class="explorer-title">Explorer</span>
+          <span class="explorer-header-chevron">
+            <svg class="chevron" viewBox="0 0 12.5 6.25" aria-hidden="true"><path d="M0.5 0.5 L6.25 5.75 L12 0.5"/></svg>
+          </span>
+        </button>
+        <div class="explorer-content" id="explorer-content">
+          <ul>
+            <li class="explorer-active-folder">
+              <details open data-folder-path="Folder 1">
+                <summary><span class="explorer-chevron"><svg class="chevron" viewBox="0 0 7.5 3.75" aria-hidden="true"><path d="M0.4 0.4 L3.75 3.35 L7.1 0.4"/></svg></span>Folder 1</summary>
+                <ul>
+                  <li><a href="#" aria-current="page">Note</a></li>
+                  <li><a href="#">Note 2</a></li>
+            <li>
+              <details open data-folder-path="Folder 1/Sub Folder">
+                <summary><span class="explorer-chevron"><svg class="chevron" viewBox="0 0 7.5 3.75" aria-hidden="true"><path d="M0.4 0.4 L3.75 3.35 L7.1 0.4"/></svg></span>Sub Folder</summary>
+                <ul>
+                  <li><a href="#">Deep Note</a></li>
+                  <li><a href="#">Another Deep Note</a></li>
+                </ul>
+              </details>
+            </li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details data-folder-path="Folder 2">
+                <summary><span class="explorer-chevron"><svg class="chevron" viewBox="0 0 7.5 3.75" aria-hidden="true"><path d="M0.4 0.4 L3.75 3.35 L7.1 0.4"/></svg></span>Folder 2</summary>
+                <ul>
+                  <li><a href="#">Note 3</a></li>
+                  <li><a href="#">Note 4</a></li>
+                </ul>
+              </details>
+            </li>
+            <li>
+              <details data-folder-path="Projects">
+                <summary><span class="explorer-chevron"><svg class="chevron" viewBox="0 0 7.5 3.75" aria-hidden="true"><path d="M0.4 0.4 L3.75 3.35 L7.1 0.4"/></svg></span>Projects</summary>
+                <ul>
+                  <li><a href="#">Muffin</a></li>
+                  <li><a href="#">lkmariano.web</a></li>
+                </ul>
+              </details>
+            </li>
+            <li><a href="#">Home</a></li>
+            <li><a href="#">Getting Started</a></li>
+            <li><a href="#">About</a></li>
+            <li><a href="#">Roadmap</a></li>
+            <li><a href="#">Changelog</a></li>
+          </ul>
+        </div>
+      </div>
+      <footer>Generated by Muffin</footer>
+    </nav>
+
+    <main>
+      <div class="content">
+        <h1>Welcome to Muffin</h1>
+        <div class="page-meta">
+          <span class="page-updated">Sep 21, 2026</span>
+          <span class="page-tags">Home, Getting Started</span>
+        </div>
+
+        <h1 id="this-is-h1">This is H1 (22 font, Bold Instrument Sans)</h1>
+        <p>This is body text (14 font, regular, Instrument sans)</p>
+        <p>lorem ipsum dolor sit amet consectetur adipiscing elit laborum deserunt eu provident fugiat est ea blanditiis qui est cupidatat voluptas omnis rerum aliqua elit repellendus possimus est voluptate labore laboris aliqua esse fugiat laboris dolores nobis voluptatum</p>
+        <p>ut occaecat rerum ducimus et veniam quis ut at quas eligendi elit dolore optio quas fugiat facere optio quo mollit molestias id animi officia laborum est eiusmod dolor duis ipsum est amet aute aut dolore quis qui cum proident excepteur nihil harum sint quas ullamco dolor occaecat dolore cillum et ex soluta labore nihil ut dolores at ad quas fugiat in tempor ullamco eu fugiat ut id amet et cumque facilis ut illum dolorum est fugiat consequat officia nulla est mollitia quo est</p>
+
+        <h1 id="this-is-h1-new">This is H1 New (22 font, Bold Instrument Sans)</h1>
+        <p>This is body text</p>
+        <p>lorem ipsum dolor sit amet consectetur adipiscing elit laborum deserunt eu provident fugiat est ea blanditiis qui est cupidatat voluptas omnis rerum aliqua elit repellendus possimus est voluptate labore laboris aliqua esse fugiat laboris dolores nobis voluptatum</p>
+        <p>ut occaecat rerum ducimus et veniam quis ut at quas eligendi elit dolore optio quas fugiat facere optio quo mollit molestias id animi officia laborum est eiusmod dolor duis ipsum est amet aute aut dolore quis qui cum proident excepteur nihil harum sint quas ullamco dolor occaecat dolore cillum et ex soluta labore nihil ut dolores at ad quas fugiat in tempor ullamco eu fugiat ut id amet et cumque facilis ut illum dolorum est fugiat consequat officia nulla est mollitia quo est</p>
+
+        <!-- Extra sections so the preview is tall enough to scroll-test the TOC. -->
+        <h2 id="scroll-test-h2">Scroll test (H2)</h2>
+        <p>lorem ipsum dolor sit amet consectetur adipiscing elit laborum deserunt eu provident fugiat est ea blanditiis qui est cupidatat voluptas omnis rerum aliqua elit repellendus possimus est voluptate labore laboris aliqua esse fugiat laboris dolores nobis voluptatum</p>
+        <p>ut occaecat rerum ducimus et veniam quis ut at quas eligendi elit dolore optio quas fugiat facere optio quo mollit molestias id animi officia laborum est eiusmod dolor duis ipsum est amet aute aut dolore quis qui cum proident excepteur nihil harum sint quas ullamco dolor occaecat dolore cillum et ex soluta labore nihil ut dolores at ad quas fugiat in tempor ullamco eu fugiat ut id amet et cumque facilis ut illum dolorum est fugiat consequat officia nulla est mollitia quo est</p>
+        <p>lorem ipsum dolor sit amet consectetur adipiscing elit laborum deserunt eu provident fugiat est ea blanditiis qui est cupidatat voluptas omnis rerum aliqua elit repellendus possimus est voluptate labore laboris aliqua esse fugiat laboris dolores nobis voluptatum</p>
+
+        <h3 id="scroll-test-h3">Scroll test (H3)</h3>
+        <p>ut occaecat rerum ducimus et veniam quis ut at quas eligendi elit dolore optio quas fugiat facere optio quo mollit molestias id animi officia laborum est eiusmod dolor duis ipsum est amet aute aut dolore quis qui cum proident excepteur nihil harum sint quas ullamco dolor occaecat dolore cillum et ex soluta labore nihil ut dolores at ad quas fugiat in tempor ullamco eu fugiat ut id amet et cumque facilis ut illum dolorum est fugiat consequat officia nulla est mollitia quo est</p>
+        <p>lorem ipsum dolor sit amet consectetur adipiscing elit laborum deserunt eu provident fugiat est ea blanditiis qui est cupidatat voluptas omnis rerum aliqua elit repellendus possimus est voluptate labore laboris aliqua esse fugiat laboris dolores nobis voluptatum</p>
+        <p>ut occaecat rerum ducimus et veniam quis ut at quas eligendi elit dolore optio quas fugiat facere optio quo mollit molestias id animi officia laborum est eiusmod dolor duis ipsum est amet aute aut dolore quis qui cum proident excepteur nihil harum sint quas ullamco dolor occaecat dolore cillum et ex soluta labore nihil ut dolores at ad quas fugiat in tempor ullamco eu fugiat ut id amet et cumque facilis ut illum dolorum est fugiat consequat officia nulla est mollitia quo est</p>
+      </div>
+    </main>
+
+    <aside>
+      <div class="toc">
+        <details open>
+          <summary>
+            <span class="aside-title">Table of Contents</span>
+            <span class="aside-chevron">
+              <svg class="chevron" viewBox="0 0 12.5 6.25" aria-hidden="true"><path d="M0.5 0.5 L6.25 5.75 L12 0.5"/></svg>
+            </span>
+          </summary>
+          <ul class="toc-list has-spy">
+            <li class="toc-depth-1"><a href="#this-is-h1" class="is-passed">This is H1 (22 font, Bold Instrument Sans)</a></li>
+            <li class="toc-depth-1"><a href="#this-is-h1-new">This is H1 New (22 font, Bold Instrument Sans)</a></li>
+            <li class="toc-depth-2"><a href="#scroll-test-h2">Scroll test (H2)</a></li>
+            <li class="toc-depth-3"><a href="#scroll-test-h3">Scroll test (H3)</a></li>
+          </ul>
+        </details>
+      </div>
+
+      <div class="backlinks">
+        <h2 class="aside-title">Backlinks</h2>
+        <ul class="backlinks-list">
+          <li><a href="#">Backlink 1</a></li>
+          <li><a href="#">Backlink 2</a></li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ============================================================
+       PORT → page.html, replacing the old IntersectionObserver
+       scroll-spy script. Add this burger script next to it.
+       ============================================================ -->
+
+  <!-- Burger drawer -->
+  <script>
+    (function () {
+      'use strict';
+      var btn = document.getElementById('nav-toggle');
+      var nav = document.getElementById('site-nav');
+      var backdrop = document.getElementById('nav-backdrop');
+      if (!btn || !nav || !backdrop) return;
+
+      var mq = window.matchMedia('(max-width: 899px)');
+
+      function setOpen(open) {
+        nav.classList.toggle('is-open', open);
+        backdrop.classList.toggle('is-open', open);
+        btn.setAttribute('aria-expanded', String(open));
+        document.body.classList.toggle('nav-locked', open);
+        if (open) {
+          var first = nav.querySelector('button, a[href], summary');
+          if (first) first.focus();
+        }
+      }
+      function isOpen() { return nav.classList.contains('is-open'); }
+
+      btn.addEventListener('click', function () { setOpen(!isOpen()); });
+      backdrop.addEventListener('click', function () { setOpen(false); });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && isOpen()) { setOpen(false); btn.focus(); }
+      });
+      // Navigating to another note closes the drawer.
+      nav.addEventListener('click', function (e) {
+        var a = e.target.closest ? e.target.closest('a[href]') : null;
+        if (a) setOpen(false);
+      });
+      // Resizing up to desktop must not leave the page scroll-locked.
+      var onChange = function () { if (!mq.matches) setOpen(false); };
+      if (mq.addEventListener) mq.addEventListener('change', onChange);
+      else if (mq.addListener) mq.addListener(onChange);
+    })();
+  </script>
+
+  <!-- TOC scroll-spy: headings you've scrolled through are 100%, the rest 50% -->
+  <script>
+    (function () {
+      'use strict';
+      var list = document.querySelector('.toc-list');
+      if (!list) return;
+
+      var items = [];
+      var seen = Object.create(null);
+      Array.prototype.forEach.call(list.querySelectorAll('a[href^="#"]'), function (link) {
+        var id = (link.getAttribute('href') || '').slice(1);
+        try { id = decodeURIComponent(id); } catch (e) { /* keep raw id */ }
+        if (!id || seen[id]) return;
+        seen[id] = true;
+        var heading = document.getElementById(id);
+        if (heading) items.push({ heading: heading, link: link });
+      });
+      if (items.length === 0) return;
+
+      list.classList.add('has-spy');            // JS is running → dim by default
+
+      var ticking = false;
+      function update() {
+        ticking = false;
+        var line = window.innerHeight * 0.3;    // same 30% band the old observer used
+        var doc = document.documentElement;
+        var scrollable = doc.scrollHeight > window.innerHeight + 2;
+        var atBottom = scrollable && window.innerHeight + window.scrollY >= doc.scrollHeight - 2;
+
+        var current = -1;
+        items.forEach(function (item, i) {
+          var passed = atBottom || item.heading.getBoundingClientRect().top <= line;
+          item.link.classList.toggle('is-passed', passed);
+          if (passed) current = i;
+        });
+        items.forEach(function (item, i) {
+          if (i === current) item.link.setAttribute('aria-current', 'location');
+          else item.link.removeAttribute('aria-current');
+        });
+      }
+      function schedule() {
+        if (!ticking) { ticking = true; window.requestAnimationFrame(update); }
+      }
+
+      window.addEventListener('scroll', schedule, { passive: true });
+      window.addEventListener('resize', schedule);
+      update();
+    })();
+  </script>
+</body>
+</html>

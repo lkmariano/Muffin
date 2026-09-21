@@ -47,8 +47,8 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   },
   layout: {
     contentWidth: "630px",
-    mainWidth: "630px",
-    navWidth: "113px",
+    mainWidth: "700px",
+    navWidth: "190px",
     asideWidth: "181px",
     sidebarInset: "159px",
   },

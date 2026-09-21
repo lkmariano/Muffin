@@ -36,7 +36,9 @@ function renderExplorerNode(
   return `<li class="${className}">
   <details data-folder-path="${escapeAttr(node.path)}">
     <summary>
-      <span class="explorer-chevron">▶</span>
+      <span class="explorer-chevron">
+        <svg class="chevron" viewBox="0 0 7.5 3.75" aria-hidden="true"><path d="M0.4 0.4 L3.75 3.35 L7.1 0.4"/></svg>
+      </span>
       <span class="explorer-folder-name">${escapeHtml(node.name)}</span>
     </summary>
     <ul>

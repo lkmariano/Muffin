@@ -57,13 +57,31 @@ function renderPageMeta(metadata: PageMetadata): string {
   if (metadata.status) {
     metaParts.push(`<span class="page-status">${escapeHtml(metadata.status)}</span>`);
   }
-  metaParts.push(`<span class="page-updated">Updated ${escapeHtml(metadata.updated)}</span>`);
+  metaParts.push(`<span class="page-updated">${escapeHtml(formatDisplayDate(metadata.updated))}</span>`);
   if (metadata.tags.length > 0) {
     metaParts.push(
       `<span class="page-tags">${metadata.tags.map((tag) => escapeHtml(tag)).join(", ")}</span>`,
     );
   }
   return `<div class="page-meta">${metaParts.join("")}</div>`;
+}
+
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/** Renders the ISO `YYYY-MM-DD` `updated` value as a human-readable date
+ *  (e.g. "Sep 21, 2026") without timezone shifting. Falls back to the raw
+ *  value when the date cannot be parsed. */
+function formatDisplayDate(iso: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!match) return iso;
+  const year = match[1];
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!year || month < 1 || month > 12 || day < 1 || day > 31) return iso;
+  return `${MONTH_NAMES[month - 1]} ${day}, ${year}`;
 }
 
 function renderToc(toc: TocEntry[]): string {
@@ -78,7 +96,7 @@ function renderToc(toc: TocEntry[]): string {
     .join("");
 
   return listItems
-    ? `<div class="aside-toc"><div class="aside-title">Table of Contents</div><ul class="toc-list">${listItems}</ul></div>`
+    ? `<div class="toc"><details open><summary><span class="aside-title">Table of Contents</span><span class="aside-chevron"><svg class="chevron" viewBox="0 0 12.5 6.25" aria-hidden="true"><path d="M0.5 0.5 L6.25 5.75 L12 0.5"/></svg></span></summary><ul class="toc-list">${listItems}</ul></details></div>`
     : "";
 }
 
@@ -91,7 +109,7 @@ function renderBacklinks(backlinks: { title: string; href: string }[]): string {
     .join("");
 
   return listItems
-    ? `<div class="aside-backlinks"><div class="aside-title">Backlinks</div><ul class="backlinks-list">${listItems}</ul></div>`
+    ? `<div class="backlinks"><h2 class="aside-title">Backlinks</h2><ul class="backlinks-list">${listItems}</ul></div>`
     : "";
 }
 

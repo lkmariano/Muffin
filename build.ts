@@ -10,9 +10,10 @@ import { extractToc } from "./src/content/toc.js";
 import { buildTargetIndex, resolveReferenceFragments } from "./src/content/targets.js";
 import { buildSiteGraph, resolveBacklinks } from "./src/graph/backlinks.js";
 import { writePages } from "./src/output/writer.js";
-import { copyAssets, writeStaticAssets } from "./src/output/assets.js";
+import { copyAssets, copyPublicAssets, writeStaticAssets } from "./src/output/assets.js";
 import { loadPageTemplate } from "./src/output/templates.js";
 import { renderPage } from "./src/rendering/page.js";
+import { createPresentationContext } from "./src/rendering/context.js";
 import { loadConfig } from "./src/config/loader.js";
 import type { Page } from "./src/domain/page.js";
 import type { Root } from "mdast";
@@ -58,6 +59,7 @@ async function parseFiles(
 
     parsedData.push({
       path: content.path,
+      relPath: content.relPath,
       slug,
       title: resolvePageTitle(content.frontmatter, content.path),
       metadata: {
@@ -95,12 +97,21 @@ async function main(): Promise<void> {
       console.log("No pages found to render.");
     } else {
       const explorerTree = buildExplorerTree(contents);
-      const explorerHtml = renderExplorer(explorerTree, config.site.basePath);
       const template = loadPageTemplate();
-      const outputPages = parsedData.map((page) => ({
-        path: page.path,
-        renderedHtml: renderPage(page, template, explorerHtml, config.site, config.site.basePath, { hasMath }),
-      }));
+      const outputPages = parsedData.map((page) => {
+        const explorerHtml = renderExplorer(
+          explorerTree,
+          config.site.basePath,
+          page.relPath,
+        );
+        return {
+          path: page.path,
+          renderedHtml: renderPage(
+            createPresentationContext(page, config.site, explorerHtml, { hasMath }),
+            template,
+          ),
+        };
+      });
       writePages(outputPages, {
         ...(config.homepage === undefined ? {} : { homepage: config.homepage }),
         contentRoot: config.content.directory,
@@ -109,6 +120,7 @@ async function main(): Promise<void> {
       writeStaticAssets(config.theme, { outputRoot, hasMath });
     }
     copyAssets(assets, { outputRoot });
+    copyPublicAssets(path.join(PROJECT_ROOT, "public"), { outputRoot });
   } catch (error) {
     console.error("Build failed:", error);
     process.exit(1);

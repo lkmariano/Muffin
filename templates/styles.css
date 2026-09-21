@@ -1,47 +1,68 @@
-/* Font @import is generated into theme.css from the theme tokens in
-   muffin.config.ts (see src/theme/css.ts's generateFontImport). */
+/* Muffin v1 default presentation (DESIGN.md). Every visual value comes from
+   theme tokens in theme.css (generated from src/theme/css.ts + config); this
+   stylesheet owns only role-to-component mapping and responsive arrangement. */
 
 * {
   box-sizing: border-box;
 }
 
-html, body {
-  margin: 0px;
-  height: 100vh;
-  overflow: hidden;
+html {
+  font-size: var(--typography-base-size);
+}
+
+body {
+  margin: 0;
   font-family: var(--typography-body);
   font-size: var(--typography-base-size);
   font-weight: var(--typography-weight);
   line-height: var(--typography-line-height);
+  letter-spacing: 0;
   color: var(--color-text);
   background-color: var(--color-background);
 }
 
-.page {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-  padding: var(--spacing-10);
-  justify-content: center;
+/* Visible keyboard focus (DESIGN.md §13). Overrides float so controls that
+   previously used `all: unset` keep a discernible keyboard indication. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
+
+a {
+  color: var(--color-link);
+}
+
+/* ---------- Three-column desktop layout (DESIGN.md §5, §7.1) ---------- */
+
+.page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns:
+    var(--layout-nav-width)
+    minmax(0, var(--layout-main-width))
+    minmax(0, var(--layout-aside-width));
+  align-items: start;
+  justify-content: start;
+  column-gap: var(--spacing-7);
+  padding: var(--spacing-7) 0 0 var(--layout-sidebar-inset);
+}
+
+/* ---------- Left column: site title + Explorer (§6.1) ---------- */
 
 nav {
-  width: var(--layout-nav-width);
-  flex-shrink: 0;
-  padding: var(--spacing-9) var(--spacing-8) 0px var(--layout-sidebar-inset);
-  height: 100%;
+  min-width: 0;
   position: sticky;
-  top: 0px;
-  display: flex;
-  flex-direction: column;
+  top: var(--spacing-7);
+  padding-top: var(--spacing-3);
 }
 
-.nav-links {
-  flex: 1;
-  overflow-y: auto;
-  padding-left: var(--spacing-8);
-  display: flex;
-  flex-direction: column;
+.site-title {
+  font-family: var(--typography-heading);
+  font-size: var(--typography-size-2xl);
+  font-weight: var(--typography-heading-weight);
+  line-height: var(--typography-line-height);
+  color: var(--color-accent);
+  margin-bottom: var(--spacing-2);
 }
 
 .explorer-header {
@@ -49,93 +70,93 @@ nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--spacing-3);
   cursor: pointer;
-  padding: var(--spacing-2) 0 var(--spacing-5) 0;
-  flex-shrink: 0;
+  width: 100%;
+  padding: var(--spacing-2) 0;
 }
 
 .explorer-title {
-  font-size: var(--typography-size-md);
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-family: var(--typography-heading);
+  font-size: var(--typography-size-lg);
+  font-weight: var(--typography-heading-weight);
   color: var(--color-text);
-  text-transform: uppercase;
 }
 
 .explorer-header-chevron {
   font-size: var(--typography-size-sm);
   color: var(--color-text);
-  transition: transform 0.15s ease;
 }
 
 .explorer-header[aria-expanded="false"] .explorer-header-chevron {
   transform: rotate(-90deg);
 }
 
-.explorer-content {
-  flex: 1;
-  overflow-y: auto;
+/* Current note stays normal text — never a filled background/pill (§5.2,
+   DESIGN.md §12). */
+nav a[aria-current="page"] {
+  color: var(--color-text);
+}
+
+/* Active folder uses the accent treatment (DESIGN.md §6.1, §12). */
+nav li.explorer-active-folder > details > summary {
+  color: var(--color-accent);
 }
 
 .nav-links ul {
   list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.explorer-content {
+  padding: var(--spacing-4) 0;
+}
+
+/* Tree line: 0.4px stroke in `colors.text`; nested levels indent by 27px. */
+.nav-links ul {
   padding-left: var(--spacing-6);
-  margin: var(--spacing-1) 0px;
-  text-align: left;
-  border-left: 1px solid var(--color-border);
+  border-left: 0.4px solid var(--color-text);
 }
 
 .nav-links > .explorer-content > ul {
-  padding-left: 0px;
+  padding-left: 0;
   border-left: none;
 }
 
-.site-title {
-  font-family: var(--typography-heading);
-  font-size: var(--typography-size-2xl);
-  font-weight: var(--typography-heading-weight);
-  line-height: 1.2;
-  color: var(--color-text);
-  padding: 0 0 var(--spacing-7) var(--spacing-8);
-  flex-shrink: 0;
-  text-align: left;
-}
-
 nav li {
-  margin: var(--spacing-1) 0;
+  margin: 0;
 }
 
 nav a {
-  text-decoration: none;
-  color: var(--color-text-muted);
-  font-size: var(--typography-size-lg);
-  font-weight: 400;
   font-family: var(--typography-body);
+  font-size: var(--typography-size-md);
+  font-weight: 700;
+  color: var(--color-text);
+  text-decoration: none;
 }
 
 nav a:hover {
   color: var(--color-accent);
-  text-decoration: underline;
 }
 
 nav details {
-  margin: var(--spacing-1) 0;
+  margin: 0;
 }
 
 nav summary {
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  font-family: var(--typography-heading);
-  font-size: var(--typography-size-lg);
-  font-weight: var(--typography-heading-weight);
   cursor: pointer;
-  color: var(--color-text);
+  list-style: none;
   padding: var(--spacing-2) 0;
-  list-style-position: outside;
+  font-family: var(--typography-body);
+  font-size: var(--typography-size-md);
+  font-weight: 700;
+  color: var(--color-text);
 }
 
-nav summary::marker,
 nav summary::-webkit-details-marker {
   display: none;
 }
@@ -144,14 +165,9 @@ nav summary:hover {
   color: var(--color-accent);
 }
 
-nav details ul {
-  margin: var(--spacing-1) 0 var(--spacing-1) var(--spacing-3);
-}
-
 .explorer-chevron {
-  display: inline-block;
-  font-size: 0.65em;
-  color: var(--color-text-muted);
+  font-size: 0.6em;
+  color: var(--color-text);
   transition: transform 0.15s ease;
 }
 
@@ -160,126 +176,193 @@ nav details[open] > summary .explorer-chevron {
 }
 
 nav footer {
-  flex-shrink: 0;
-  padding: var(--spacing-7) var(--spacing-8) var(--spacing-7) var(--spacing-8);
-  text-align: left;
+  margin-top: var(--spacing-4);
   font-size: var(--typography-size-xs);
   color: var(--color-text-muted);
-  margin-top: var(--spacing-5);
-  width: auto;
-  height: auto;
 }
 
+/* ---------- Middle column: page header + body (§6.2) ---------- */
+
 main {
-  flex: 1;
-  max-width: var(--layout-main-width);
-  padding: var(--spacing-9) var(--spacing-11);
-  overflow-y: auto;
-  height: 100%;
+  min-width: 0;
 }
 
 .content {
   max-width: var(--layout-content-width);
+  margin: 0 auto;
+  padding-bottom: var(--spacing-7);
+  /* Tables/code may scroll inside the content measure, never the page. */
+  overflow-x: auto;
 }
 
-main h1 {
+/* The page-title <h1> is the first child; content headings follow. */
+.content > h1:first-child {
   font-family: var(--typography-heading);
   font-size: var(--typography-size-2xl);
   font-weight: var(--typography-heading-weight);
-  line-height: 1.2;
-  margin-top: 0px;
+  line-height: var(--typography-line-height);
+  color: var(--color-text);
+  margin: 0 0 var(--spacing-2) 0;
 }
 
 .page-meta {
   display: flex;
-  gap: var(--spacing-8);
-  font-size: var(--typography-size-xs);
-  color: var(--color-text-muted);
-  margin-bottom: var(--spacing-7);
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spacing-3);
+  font-size: var(--typography-size-sm);
+  font-weight: var(--typography-weight);
+  color: var(--color-text);
+  margin-bottom: var(--spacing-5);
 }
 
 .page-status {
   text-transform: uppercase;
-  letter-spacing: 0.02em;
 }
+
+/* Content headings (DESIGN.md §3 text styles). */
+.content h1,
+.content h2,
+.content h3,
+.content h4,
+.content h5,
+.content h6 {
+  font-family: var(--typography-heading);
+  font-weight: var(--typography-heading-weight);
+  line-height: var(--typography-line-height);
+  color: var(--color-text);
+  margin: var(--spacing-4) 0 var(--spacing-3) 0;
+}
+
+.content h1:not(:first-child) {
+  font-size: var(--typography-size-xl);
+}
+
+.content h2 {
+  font-size: var(--typography-size-lg);
+}
+
+.content h3 {
+  font-size: var(--typography-size-md);
+}
+
+.content h4,
+.content h5,
+.content h6 {
+  font-size: var(--typography-size-sm);
+}
+
+.content h5,
+.content h6 {
+  font-weight: 600;
+}
+
+.content h6 {
+  color: var(--color-text-muted);
+}
+
+.content p {
+  margin: 0 0 var(--spacing-4) 0;
+}
+
+.content ul,
+.content ol {
+  margin: 0 0 var(--spacing-4) 0;
+  padding-left: var(--spacing-4);
+}
+
+.content hr {
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  margin: var(--spacing-4) 0;
+}
+
+.content a {
+  color: var(--color-link);
+}
+
+/* ---------- Right column: TOC + Backlinks (§6.3) ---------- */
 
 aside {
-  width: var(--layout-aside-width);
-  flex-shrink: 0;
-  padding: var(--spacing-9) var(--layout-sidebar-inset) 0px var(--spacing-8);
-  height: 100%;
+  min-width: 0;
   position: sticky;
-  top: 0px;
+  top: var(--spacing-7);
   display: flex;
   flex-direction: column;
-}
-
-.backlinks-list {
-  flex: 1;
-  overflow-y: auto;
-  padding-right: var(--spacing-8);
-}
-
-.backlinks-list ul {
-  list-style: none;
-  padding-right: var(--spacing-7);
-  margin: var(--spacing-4) 0px;
-  text-align: right;
-}
-
-.backlinks-list > ul {
-  padding-right: 0px;
+  gap: var(--spacing-7);
+  padding-top: var(--spacing-3);
 }
 
 .aside-title {
   font-family: var(--typography-heading);
-  font-size: var(--typography-size-2xl);
+  font-size: var(--typography-size-md);
   font-weight: var(--typography-heading-weight);
-  line-height: 1.2;
   color: var(--color-text);
-  padding: 0 var(--spacing-8) var(--spacing-7) 0;
-  flex-shrink: 0;
-  text-align: right;
+  margin-bottom: var(--spacing-3);
 }
 
-aside a {
-  text-decoration: none;
-  color: var(--color-link);
-  font-size: var(--typography-size-xl);
-  font-weight: 600;
+.toc-list,
+.backlinks-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.toc-list li {
+  margin-bottom: var(--spacing-3);
+}
+
+.toc-depth-2 {
+  padding-left: var(--spacing-3);
+}
+
+.toc-depth-3 {
+  padding-left: calc(var(--spacing-3) * 2);
+}
+
+.toc-list a {
   font-family: var(--typography-body);
+  font-size: var(--typography-size-sm);
+  font-weight: var(--typography-weight);
+  color: var(--color-text);
+  text-decoration: none;
 }
 
-aside a:hover {
+/* Active TOC state: muted inactive entries only while an active heading
+   exists; the active entry returns to normal text (DESIGN.md §6.3, §12). */
+.toc-list.has-active a {
+  color: var(--color-text-muted);
+}
+
+.toc-list.has-active a.is-active {
+  color: var(--color-text);
+}
+
+.toc-list a:hover {
   text-decoration: underline;
 }
-a {
+
+.backlinks-list li {
+  margin-bottom: var(--spacing-1);
+}
+
+.backlinks-list a {
+  font-family: var(--typography-body);
+  font-size: var(--typography-size-sm);
+  font-weight: 600;
   color: var(--color-link);
+  text-decoration: none;
 }
 
-pre, code {
+.backlinks-list a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Content elements not in the mockup (DESIGN.md §9) ---------- */
+
+pre,
+code {
   font-family: var(--typography-mono);
-}
-
-pre {
-  background-color: var(--color-code-background);
-  color: var(--color-code);
-  border: 1px solid var(--color-code-border);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-5);
-  overflow-wrap: break-word;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-  font-size: 0.85em;
-}
-
-pre code {
-  background-color: transparent;
-  border: none;
-  padding: 0;
-  font-family: inherit;
-  font-size: inherit;
-  color: inherit;
 }
 
 code {
@@ -287,28 +370,52 @@ code {
   color: var(--color-code);
   border: 1px solid var(--color-code-border);
   border-radius: var(--radius-md);
-  padding: var(--spacing-1) var(--spacing-3);
+  padding: 0 var(--spacing-1);
   font-size: 0.85em;
 }
 
-mark {
-  background-color: #fff2b2;
+pre {
+  background-color: var(--color-code-background);
+  color: var(--color-code);
+  border: 1px solid var(--color-code-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-4);
+  margin: 0 0 var(--spacing-4) 0;
+  overflow-x: auto;
+  font-size: 0.85em;
+}
+
+pre code {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  font-size: inherit;
   color: inherit;
-  border-radius: var(--radius-sm);
-  padding: 0 var(--spacing-1);
+}
+
+blockquote {
+  margin: 0 0 var(--spacing-4) 0;
+  padding-left: var(--spacing-3);
+  border-left: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+mark {
+  background-color: transparent;
+  color: var(--color-accent);
+  font-weight: 600;
 }
 
 table {
   border-collapse: collapse;
   width: 100%;
-  margin: var(--spacing-4) 0;
-  border: 1px solid var(--color-border);
-  font-size: 0.9em;
+  margin: 0 0 var(--spacing-4) 0;
 }
 
-th, td {
+th,
+td {
   border: 1px solid var(--color-border);
-  padding: var(--spacing-4) var(--spacing-5);
+  padding: var(--spacing-3);
   text-align: left;
   vertical-align: top;
 }
@@ -318,11 +425,12 @@ th {
 }
 
 .callout {
-  border-left: 3px solid var(--color-border);
-  background-color: #f7f7f7;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-code-background);
+  color: var(--color-text);
   border-radius: var(--radius-md);
-  padding: var(--spacing-4) var(--spacing-5);
-  margin: var(--spacing-4) 0;
+  padding: var(--spacing-4);
+  margin: 0 0 var(--spacing-4) 0;
 }
 
 .callout-title {
@@ -349,4 +457,67 @@ th {
   width: 100%;
   height: 600px;
   border: 0;
+}
+
+.footnotes {
+  font-size: var(--typography-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* ---------- Responsive arrangement (§7) ---------- */
+
+/* Tablet: 700px–1099px — nav + content, secondary sections below. */
+@media (max-width: 1099px) {
+  .page {
+    grid-template-columns: var(--layout-nav-width) minmax(0, 1fr);
+    padding: var(--spacing-4) var(--spacing-4) 0 var(--layout-sidebar-inset);
+  }
+
+  aside {
+    grid-column: 1 / -1;
+    position: static;
+    flex-direction: column;
+    gap: var(--spacing-4);
+    padding-top: var(--spacing-6);
+  }
+
+  aside > div {
+    width: var(--layout-content-width);
+    max-width: 100%;
+  }
+}
+
+/* Mobile: < 700px — single column; 20px horizontal padding. */
+@media (max-width: 699px) {
+  .page {
+    display: block;
+    padding: var(--spacing-4);
+  }
+
+  nav,
+  aside,
+  main {
+    position: static;
+    width: 100%;
+  }
+
+  .site-title,
+  .content > h1:first-child {
+    font-size: 32px;
+  }
+
+  /* Mobile Explorer collapse: hides only the tree, keeps the heading/toggle. */
+  .explorer-content.explorer-collapsed {
+    display: none;
+  }
+
+  .nav-links > .explorer-content > ul {
+    padding: var(--spacing-4) 0;
+  }
+
+  aside {
+    flex-direction: column;
+    gap: var(--spacing-4);
+    padding-top: var(--spacing-6);
+  }
 }

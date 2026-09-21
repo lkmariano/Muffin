@@ -60,3 +60,25 @@ export function copyAssets(assets: LoadedAsset[], options: CopyAssetsOptions = {
     fs.copyFileSync(asset.path, outputPath);
   }
 }
+
+export interface CopyPublicAssetsOptions {
+  outputRoot?: string;
+}
+
+/**
+ * Passthrough for the project-level `public/` directory. Its contents are
+ * copied into the output root verbatim — never parsed or transformed as
+ * Markdown. A missing or empty directory is a no-op. Vault disclosure
+ * (exclude globs) applies to the content directory; `public/` is a
+ * project-level convention and is copied wholesale.
+ */
+export function copyPublicAssets(
+  publicDirectory: string,
+  options: CopyPublicAssetsOptions = {},
+): void {
+  if (!fs.existsSync(publicDirectory) || !fs.statSync(publicDirectory).isDirectory()) {
+    return;
+  }
+  const outputRoot = path.resolve(options.outputRoot ?? "./muffin");
+  copyDir(publicDirectory, outputRoot);
+}

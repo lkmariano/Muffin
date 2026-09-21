@@ -1,28 +1,57 @@
 import type { ExplorerNode } from "../domain/explorer.js";
 import { withBasePath } from "../../basePath.js";
 
-export function renderExplorer(nodes: ExplorerNode[], basePath = ""): string {
-  return `<ul>${nodes.map((node) => renderExplorerNode(node, basePath)).join("")}</ul>`;
+/**
+ * Renders the Explorer tree. `currentRelPath` is the canonical root-relative
+ * identity of the page being shown; matching is always exact relPath — never
+ * basename — so duplicate filenames stay independent across folders.
+ */
+export function renderExplorer(
+  nodes: ExplorerNode[],
+  basePath = "",
+  currentRelPath?: string,
+): string {
+  return `<ul>${nodes.map((node) => renderExplorerNode(node, basePath, currentRelPath)).join("")}</ul>`;
 }
 
-function renderExplorerNode(node: ExplorerNode, basePath: string): string {
+function renderExplorerNode(
+  node: ExplorerNode,
+  basePath: string,
+  currentRelPath?: string,
+): string {
   if (node.type === "file") {
     const href = withBasePath(basePath, `/${node.href}`);
-    return `<li class="explorer-file"><a href="${href}">${escapeHtml(node.name)}</a></li>`;
+    const isCurrent = currentRelPath !== undefined && node.path === currentRelPath;
+    const className = isCurrent ? "explorer-file explorer-current" : "explorer-file";
+    const ariaCurrent = isCurrent ? ' aria-current="page"' : "";
+    return `<li class="${className}" data-explorer-path="${escapeAttr(node.path)}"><a href="${href}"${ariaCurrent}>${escapeHtml(node.name)}</a></li>`;
   }
 
   const children = node.children ?? [];
-  return `<li class="explorer-folder">
-  <details>
+  const isActiveFolder =
+    currentRelPath !== undefined && currentRelPath.startsWith(`${node.path}/`);
+  const className = isActiveFolder
+    ? "explorer-folder explorer-active-folder"
+    : "explorer-folder";
+  return `<li class="${className}">
+  <details data-folder-path="${escapeAttr(node.path)}">
     <summary>
       <span class="explorer-chevron">▶</span>
       <span class="explorer-folder-name">${escapeHtml(node.name)}</span>
     </summary>
     <ul>
-${children.map((child) => renderExplorerNode(child, basePath)).join("\n")}
+${children.map((child) => renderExplorerNode(child, basePath, currentRelPath)).join("\n")}
     </ul>
   </details>
 </li>`;
+}
+
+function escapeAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function escapeHtml(str: string): string {

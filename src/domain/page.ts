@@ -15,6 +15,8 @@ export type PageMetadata = {
 
 export type Page = {
   path: string;
+  /** Root-relative canonical identity (same string loadContent emits). */
+  relPath: string;
   slug: string;
   title: string;
   metadata: PageMetadata;

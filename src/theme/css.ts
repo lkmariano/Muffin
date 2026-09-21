@@ -30,6 +30,9 @@ export type TypographyTokens = {
   sizes: TypographySizeTokens;
 };
 
+// The Muffin v1 spacing scale (DESIGN.md §4). Keys above `7` are not part of
+// the finalized design; components needing intermediate space use the closest
+// existing token instead of inventing new values.
 export type SpacingTokenScale = {
   "1": string;
   "2": string;
@@ -38,10 +41,6 @@ export type SpacingTokenScale = {
   "5": string;
   "6": string;
   "7": string;
-  "8": string;
-  "9": string;
-  "10": string;
-  "11": string;
 };
 
 export type LayoutTokens = {
@@ -193,7 +192,7 @@ export function generateFontImport(tokens: ThemeTokens): string {
   }
 
   const familyParams = families
-    .map((family) => `family=${family.replace(/\s+/g, "+")}:wght@400;500;600;700`)
+    .map((family) => `family=${family.replace(/\s+/g, "+")}:wght@400;600;700`)
     .join("&");
 
   return `@import url('https://fonts.googleapis.com/css2?${familyParams}&display=swap');\n`;

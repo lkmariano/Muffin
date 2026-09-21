@@ -29,8 +29,10 @@
     "vfile": "^6.0.3"
   },
   "devDependencies": {
+    "@types/jsdom": "^30.0.0",
     "@types/micromatch": "^4.0.10",
     "@types/node": "^26.2.0",
+    "jsdom": "^29.1.1",
     "tsx": "^4.23.11",
     "typescript": "^7.0.2",
     "vitest": "^5.0.0"

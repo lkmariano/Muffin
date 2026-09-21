@@ -40,13 +40,13 @@ export default defineConfig({
         // sizes: { xs, sm, md, lg, xl, "2xl" }
       },
       spacing: {
-        // scale "1".."11" -> --spacing-1 .. --spacing-11
+        // final scale "1".."7" -> --spacing-1 .. --spacing-7 (2px..50px)
       },
       layout: {
         // contentWidth, mainWidth, navWidth, asideWidth, sidebarInset
       },
       radius: {
-        // sm, md
+        // sm, md (v1 default radius is 0)
       },
     },
   },

@@ -9,7 +9,6 @@ export default defineConfig({
     lang: "en",
     // If unset, Muffin falls back to MUFFIN_BASE_PATH (used by the GitHub
     // Pages deploy workflow), then to "".
-    basePath: "",
   },
 
   content: {

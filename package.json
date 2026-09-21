@@ -16,6 +16,7 @@
     "gray-matter": "^4.0.3",
     "katex": "^0.18.7",
     "mdast-util-find-and-replace": "^3.0.2",
+    "mdast-util-to-string": "^4.0.0",
     "micromatch": "^4.0.8",
     "rehype-katex": "^7.0.1",
     "rehype-stringify": "^10.0.1",
@@ -28,6 +29,7 @@
     "vfile": "^6.0.3"
   },
   "devDependencies": {
+    "@types/micromatch": "^4.0.10",
     "@types/node": "^26.2.0",
     "tsx": "^4.23.11",
     "typescript": "^7.0.2",

@@ -1,9 +1,12 @@
-import { formatDate, getSlug, getTitle } from "./util.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { formatDate, getSlug } from "./util.js";
 import { buildExplorerTree } from "./src/graph/navigation.js";
 import { renderExplorer } from "./src/rendering/explorer.js";
 import { loadContent } from "./src/content/loader.js";
-import { normalizeTags } from "./src/content/frontmatter.js";
+import { normalizeTags, resolvePageTitle } from "./src/content/frontmatter.js";
 import { containsMath, parseMarkdown, renderMarkdownTree } from "./src/content/markdown.js";
+import { extractToc } from "./src/content/toc.js";
 import { buildTargetIndex, resolveReferenceFragments } from "./src/content/targets.js";
 import { buildSiteGraph, resolveBacklinks } from "./src/graph/backlinks.js";
 import { writePages } from "./src/output/writer.js";
@@ -38,7 +41,11 @@ async function parseFiles(
     }
   }
 
-  const parsed = contents.map((content) => ({ path: content.path, tree: trees[content.path]! }));
+  const parsed = contents.map((content) => ({
+    path: content.path,
+    relPath: content.relPath,
+    tree: trees[content.path]!,
+  }));
   const targetIndex = buildTargetIndex(parsed);
   resolveReferenceFragments(parsed, targetIndex);
 
@@ -47,27 +54,33 @@ async function parseFiles(
   for (const content of contents) {
     const slug = getSlug(content.path);
     const statusValue = content.frontmatter.status;
+    const tree = trees[content.path]!;
 
     parsedData.push({
       path: content.path,
       slug,
-      title: getTitle(content.path),
+      title: resolvePageTitle(content.frontmatter, content.path),
       metadata: {
         frontmatter: content.frontmatter,
         ...(typeof statusValue === "string" ? { status: statusValue } : {}),
         updated: formatDate(content.mtime),
         tags: normalizeTags(content.frontmatter.tags),
       },
-      content: await renderMarkdownTree(trees[content.path]!, basePath),
-      backlinks: resolveBacklinks(graph, slug, slugMap, basePath),
+      // TOC extraction must run before rendering mutates the shared AST.
+      toc: extractToc(tree),
+      content: await renderMarkdownTree(tree, basePath),
+      backlinks: resolveBacklinks(graph, content.relPath, basePath),
     });
   }
 
   return { parsedData, contents, assets, hasMath };
 }
 
+const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
+const CONFIG_PATH = path.join(PROJECT_ROOT, "muffin.config.ts");
+
 async function main(): Promise<void> {
-  const config = await loadConfig();
+  const config = await loadConfig(CONFIG_PATH);
   const outputRoot = config.output.directory;
 
   console.log("Parsing markdown files...");

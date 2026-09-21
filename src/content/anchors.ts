@@ -1,4 +1,5 @@
 import { visit } from "unist-util-visit";
+import type { Node } from "unist";
 
 import type { Root } from "mdast";
 

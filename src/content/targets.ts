@@ -1,5 +1,4 @@
 import { visit } from "unist-util-visit";
-import { getSlug } from "../../util.js";
 import { headingSlug, nodeText } from "./anchors.js";
 
 import type { ReferenceFragment } from "./anchors.js";
@@ -7,6 +6,8 @@ import type { ParsedMarkdown } from "./markdown.js";
 
 // Per-page reference targets. Separate from SiteGraph (page-to-page
 // relationships): this answers where a reference points within a page.
+// Pages are keyed by root-relative relPath (canonical page identity), so
+// duplicate basenames in different directories stay distinct.
 export type PageTargetIndex = {
   // slugged heading text → that heading's emitted anchor id
   headings: Record<string, string>;
@@ -19,7 +20,7 @@ export type TargetIndex = Record<string, PageTargetIndex>;
 export function buildTargetIndex(parsed: ParsedMarkdown[]): TargetIndex {
   const index: TargetIndex = {};
 
-  for (const { path, tree } of parsed) {
+  for (const { relPath, tree } of parsed) {
     const headings: Record<string, string> = {};
     visit(tree, "heading", (node: any) => {
       const anchor = node.data?.headingId;
@@ -43,7 +44,7 @@ export function buildTargetIndex(parsed: ParsedMarkdown[]): TargetIndex {
       }
     });
 
-    index[getSlug(path)] = { headings, blocks };
+    index[relPath] = { headings, blocks };
   }
 
   return index;
@@ -66,7 +67,8 @@ export function resolveFragmentAnchor(
 // Attaches the final URL fragment (`data.finalFragment`, including the `#`) to
 // every wikilink that carries a raw fragment target. Runs over the shared
 // parsed trees after the target index is built and before rendering, so the
-// renderer only consumes pre-resolved information.
+// renderer only consumes pre-resolved information. Wikilink `node.url` is
+// already the resolved root-relative path, so it keys the index directly.
 export function resolveReferenceFragments(parsed: ParsedMarkdown[], index: TargetIndex): void {
   for (const { tree } of parsed) {
     visit(tree, "link", (node: any) => {
@@ -74,8 +76,7 @@ export function resolveReferenceFragments(parsed: ParsedMarkdown[], index: Targe
       if (!node.data?.isWikilink || fragment === undefined) {
         return;
       }
-      const targetSlug = getSlug(node.url);
-      const anchor = resolveFragmentAnchor(index[targetSlug], fragment);
+      const anchor = resolveFragmentAnchor(index[node.url], fragment);
       node.data.finalFragment = `#${anchor}`;
     });
   }

@@ -12,9 +12,11 @@ import { imageEmbedPlugin, imageEmbedUrlPlugin, imageEmbedAlt } from "../../plug
 import { blockIdPlugin, headingIdPlugin } from "./anchors.js";
 
 import type { Root } from "mdast";
+import type { Options as RemarkRehypeOptions } from "remark-rehype";
 
 export type ParsedMarkdown = {
   path: string;
+  relPath: string;
   tree: Root;
 };
 
@@ -60,7 +62,7 @@ export async function renderMarkdownTree(tree: Root, basePath = ""): Promise<str
       handlers: {
         highlight: highlightHandler,
         pdf: pdfHandler,
-      } as unknown as Parameters<typeof remarkRehype>[0]["handlers"],
+      } as unknown as RemarkRehypeOptions["handlers"],
     })
     .use(rehypeKatex, { strict: false, throwOnError: false })
     .use(rehypeCalloutPlugin)
@@ -160,7 +162,7 @@ function toCallout(blockquote: any): void {
     return;
   }
 
-  const type = match[1];
+  const type = match[1] ?? "";
   const fold = match[2];
   const inlineTitle = match[3]?.trim() ?? "";
   const titleText =

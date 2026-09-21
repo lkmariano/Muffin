@@ -75,13 +75,16 @@ export function defineConfig(config: MuffinConfig): MuffinConfig {
 export type ResolveConfigDefaults = {
   /** Fallback base path (e.g. from MUFFIN_BASE_PATH) when site.basePath is unset. */
   basePath?: string;
+  /** Directory that relative content/output paths resolve against. Defaults to process.cwd(). */
+  baseDir?: string;
 };
 
 export function resolveConfig(raw: MuffinConfig, defaults: ResolveConfigDefaults = {}): SiteConfig {
+  const baseDir = defaults.baseDir ?? process.cwd();
   const site = resolveSiteIdentity(raw.site, defaults.basePath);
-  const content = resolveContent(raw.content);
+  const content = resolveContent(raw.content, baseDir);
   const theme = resolveTheme(raw.theme);
-  const output = resolveOutput(raw.output);
+  const output = resolveOutput(raw.output, baseDir);
 
   const homepage = isRecord(raw.homepage) && typeof raw.homepage.page === "string"
     ? raw.homepage.page
@@ -114,13 +117,13 @@ function resolveSiteIdentity(rawValue: unknown, fallbackBasePath?: string): Site
     : { title, lang, basePath, description };
 }
 
-function resolveContent(rawValue: unknown): ContentConfig {
+function resolveContent(rawValue: unknown, baseDir: string): ContentConfig {
   const rawContent = isRecord(rawValue) ? rawValue : {};
 
   const directory =
     typeof rawContent.directory === "string" && rawContent.directory !== ""
-      ? rawContent.directory
-      : "./content";
+      ? path.resolve(baseDir, rawContent.directory)
+      : path.resolve(baseDir, "./content");
 
   const exclude =
     Array.isArray(rawContent.exclude)
@@ -130,13 +133,13 @@ function resolveContent(rawValue: unknown): ContentConfig {
   return { directory, exclude };
 }
 
-function resolveOutput(rawValue: unknown): OutputConfig {
+function resolveOutput(rawValue: unknown, baseDir: string): OutputConfig {
   const rawOutput = isRecord(rawValue) ? rawValue : {};
 
   const directory =
     typeof rawOutput.directory === "string" && rawOutput.directory !== ""
-      ? rawOutput.directory
-      : "./muffin";
+      ? path.resolve(baseDir, rawOutput.directory)
+      : path.resolve(baseDir, "./muffin");
 
   return { directory };
 }
@@ -201,9 +204,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export async function loadConfig(configPath?: string): Promise<SiteConfig> {
   let raw: MuffinConfig = {};
+  let baseDir: string | undefined;
   if (configPath !== undefined) {
     try {
       const resolved = path.resolve(configPath);
+      baseDir = path.dirname(resolved);
       const mod = await import(pathToFileURL(resolved).href);
       const value = (mod.default ?? mod) as unknown;
       raw = isRecord(value) ? (value as MuffinConfig) : {};
@@ -211,5 +216,10 @@ export async function loadConfig(configPath?: string): Promise<SiteConfig> {
       raw = {};
     }
   }
-  return resolveConfig(raw, { basePath: process.env.MUFFIN_BASE_PATH ?? "" });
+
+  const defaults: ResolveConfigDefaults = { basePath: process.env.MUFFIN_BASE_PATH ?? "" };
+  if (baseDir !== undefined) {
+    defaults.baseDir = baseDir;
+  }
+  return resolveConfig(raw, defaults);
 }

@@ -1,5 +1,11 @@
 export type Backlink = { title: string; href: string };
 
+export type TocEntry = {
+  depth: number;
+  text: string;
+  id: string;
+};
+
 export type PageMetadata = {
   frontmatter: Record<string, unknown>;
   status?: string;
@@ -14,4 +20,5 @@ export type Page = {
   metadata: PageMetadata;
   content: string;
   backlinks?: Backlink[];
+  toc: TocEntry[];
 };

@@ -270,8 +270,14 @@ main {
   max-width: var(--layout-content-width);
   margin: 0; /* left-aligned: main col is 700, content is 630 */
   padding-bottom: var(--spacing-7);
-  /* Tables/code may scroll inside the content measure, never the page. */
-  overflow-x: auto;
+  /* No horizontal scroll — everything wraps inside the content measure. */
+  overflow-wrap: anywhere;
+}
+
+.content img,
+.content video {
+  max-width: 100%;
+  height: auto;
 }
 
 /* The page-title <h1> is the first child; content headings follow. */
@@ -497,7 +503,8 @@ pre {
   border-radius: var(--radius-md);
   padding: var(--spacing-4);
   margin: 0 0 var(--spacing-4) 0;
-  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   font-size: 0.85em;
 }
 

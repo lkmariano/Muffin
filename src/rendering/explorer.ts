@@ -11,7 +11,22 @@ export function renderExplorer(
   basePath = "",
   currentRelPath?: string,
 ): string {
-  return `<ul>${nodes.map((node) => renderExplorerNode(node, basePath, currentRelPath)).join("")}</ul>`;
+  const folders = nodes.filter((node) => node.type === "folder");
+  const notes = nodes.filter((node) => node.type === "file");
+  const parts: string[] = [];
+
+  if (folders.length > 0) {
+    parts.push(
+      `<ul class="explorer-folders">${folders.map((node) => renderExplorerNode(node, basePath, currentRelPath)).join("")}</ul>`,
+    );
+  }
+  if (notes.length > 0) {
+    parts.push(
+      `<ul class="explorer-notes">${notes.map((node) => renderExplorerNode(node, basePath, currentRelPath)).join("")}</ul>`,
+    );
+  }
+
+  return parts.join("");
 }
 
 function renderExplorerNode(

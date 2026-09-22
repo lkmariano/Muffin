@@ -1,4 +1,4 @@
-/* Muffin v1 default presentation (DESIGN.md / muffin-v1-preview.html).
+/* Muffin v1 default presentation (DESIGN.md).
    Every visual value comes from theme tokens in theme.css (generated from
    src/theme/css.ts + config); this stylesheet owns only role-to-component
    mapping and responsive arrangement. */
@@ -37,7 +37,7 @@ a {
 }
 
 /* ---------- Three-column desktop layout (DESIGN.md §5) ----------
-   ALIGNMENT SYSTEM (from muffin-v1-preview.html):
+   ALIGNMENT SYSTEM (from DESIGN.md):
    1. One top edge — every column starts at --layout-page-top and the
       grid uses `align-items: first baseline`, so the first line of the
       left column ("Muffin"), the page title, and the first heading of the
@@ -161,14 +161,17 @@ nav details[open] > summary .explorer-chevron {
 
 /* Explorer tree — compact + aligned.
    Geometry (all labels share ONE left edge per depth):
-     [chevron 15px][gap 10px][label]  → label starts at 25px
-   • root notes get 25px left padding, so they line up with folder labels
+     [chevron 15px][gap 4px][label]  → label starts at 19px
+   • root notes group aligns their labels with the chevron glyph's visible
+     edge (3.75px), not the box edge
    • nested lists sit 25px further in, so child labels line up with the
      parent folder's label
    • the tree line runs down the centre of the parent's chevron */
 .nav-links {
   --tree-chevron: 15px;
-  --tree-gap: var(--spacing-3);
+  --tree-chevron-glyph: 7.5px; /* drawn chevron width inside the 15px box */
+  --tree-gap: var(--spacing-3); /* nested-level indent step (10px) */
+  --tree-icon-gap: 4px; /* icon ↔ label gap — tighter than the indent step */
   --tree-row-pad: var(--spacing-1); /* tighter rows */
 }
 
@@ -185,7 +188,7 @@ nav details[open] > summary .explorer-chevron {
 .nav-links ul ul {
   margin-left: calc(var(--tree-chevron) / 2);
   padding-left: calc(var(--tree-chevron) / 2 + var(--tree-gap));
-  border-left: 0.4px solid var(--color-text);
+  border-left: 0.4px solid var(--color-border);
 }
 
 nav li {
@@ -201,9 +204,19 @@ nav a {
   padding: var(--tree-row-pad) 0;
 }
 
-/* Un-nested notes: indent past the (absent) chevron so labels align. */
-.explorer-content > ul > li > a {
-  padding-left: calc(var(--tree-chevron) + var(--tree-gap));
+/* Two stacked groups, not one flat list: Folders, then Notes.
+   No divider — the distinction is alignment, not a rule line:
+   • a folder's chevron box is 15px wide, but the drawn glyph inside it is
+     only 7.5px and centred, so its visible left edge sits
+     (15 - 7.5) / 2 = 3.75px in from column 0
+   • a root note has no chevron, so its label is offset that same 3.75px —
+     lined up with the icon's visible edge. */
+.explorer-folders {
+  margin-bottom: var(--spacing-4);
+}
+
+.explorer-notes > li > a {
+  padding-left: calc((var(--tree-chevron) - var(--tree-chevron-glyph)) / 2);
 }
 
 nav a,
@@ -229,7 +242,7 @@ nav li.explorer-active-folder > details > summary {
 nav summary {
   display: flex;
   align-items: center;
-  gap: var(--tree-gap);
+  gap: var(--tree-icon-gap);
   cursor: pointer;
   list-style: none;
   padding: var(--tree-row-pad) 0;

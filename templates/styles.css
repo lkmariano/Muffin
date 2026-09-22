@@ -274,8 +274,12 @@ main {
   overflow-wrap: anywhere;
 }
 
+/* Images scale down (never up) to the full content measure; the natural
+   aspect ratio is preserved and embed `|WIDTH` sizing is kept when it is
+   already smaller than the column. */
 .content img,
 .content video {
+  display: block;
   max-width: 100%;
   height: auto;
 }

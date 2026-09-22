@@ -64,7 +64,8 @@
         /* Animated disclosure: every <details> in the Explorer and the TOC
            goes through this. Respects prefers-reduced-motion (snaps) and
            falls back to a plain toggle where Element.animate is unavailable
-           (jsdom, older browsers), so state still restores and persists. */
+           (jsdom, older browsers). Only user-driven toggles animate;
+           restoring saved state snaps so it doesn't replay per page load. */
         function animatedDetails(details) {
           var summary = details.querySelector(':scope > summary');
           if (!summary) return null;
@@ -129,12 +130,6 @@
           }
         );
 
-        function setFolder(detail, open) {
-          var c = controllers.get(detail);
-          if (c) { if (open) c.open(); else c.close(); }
-          else detail.open = open;
-        }
-
         function storageKey() {
           var basePath = document.body && document.body.getAttribute('data-base-path');
           return 'muffin:explorer:v1:' + (basePath || '/');
@@ -160,7 +155,7 @@
           var key = detail.getAttribute('data-folder-path');
           if (!key) return;
           if (Object.prototype.hasOwnProperty.call(folders, key)) {
-            setFolder(detail, !!folders[key]);
+            detail.open = !!folders[key];
           }
           detail.addEventListener('toggle', function () {
             if (!key) return;

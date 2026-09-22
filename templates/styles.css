@@ -58,9 +58,9 @@ a {
     minmax(0, var(--layout-main-width))
     minmax(0, var(--layout-aside-width));
   align-items: first baseline;
-  justify-content: start;
+  justify-content: center;
   column-gap: var(--spacing-7);
-  padding: var(--layout-page-top) 0 0 var(--layout-sidebar-inset);
+  padding: var(--layout-page-top) 0 0;
 }
 
 /* Burger bar + backdrop: hidden on desktop. */
@@ -597,7 +597,8 @@ th {
 @media (max-width: 1099px) {
   .page {
     grid-template-columns: var(--layout-nav-width) minmax(0, 1fr);
-    padding: var(--spacing-4) var(--spacing-4) 0 var(--layout-sidebar-inset);
+    justify-content: center;
+    padding: var(--spacing-4) var(--spacing-4) 0;
   }
 
   aside {

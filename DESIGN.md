@@ -33,22 +33,27 @@
 
   | Token | Value | Use |
   | --- | --- | --- |
-  | `colors.background` | `#1A1D23` | page background |
-  | `colors.text` | `#E6EDF3` | body text, headings, meta row, explorer heading, chevrons, tree line |
-  | `colors.accent` | `#6BEFA9` | site title, active folder, emphasis |
-  | `colors.link` | `#6BEFA9` | links and backlinks |
-  | `colors.muted` | `rgba(230, 237, 243, 0.5)` | inactive / secondary text |
-  | `colors.border` | `rgba(230, 237, 243, 0.3)` | subtle structural borders where needed; not used for the desktop tree line |
-  | `colors.code` | `#E6EDF3` | inline and block code text |
-  | `colors.codeBackground` | `rgba(230, 237, 243, 0.06)` | code block background |
-  | `colors.codeBorder` | `rgba(230, 237, 243, 0.15)` | code block boundary |
+  | `colors.background` | `#202124` | page background (Chrome dark surface) |
+  | `colors.text` | `#E8EAED` | body text, headings, meta row, explorer heading, chevrons, tree line |
+  | `colors.accent` | `#81C995` | site title, active folder, emphasis (muted Material-dark green) |
+  | `colors.link` | `#81C995` | links and backlinks |
+  | `colors.muted` | `#9AA0A6` | inactive / secondary text (solid, not alpha) |
+  | `colors.border` | `#3C4043` | subtle structural borders (solid Chrome divider, not alpha) |
+  | `colors.code` | `#E8EAED` | inline and block code text |
+  | `colors.codeBackground` | `#292A2D` | code block background (elevated gray) |
+  | `colors.codeBorder` | `#3C4043` | code block boundary |
 
-  For Penpot / 8-digit hex notation:
+  The palette is cold and low-saturation (Chrome / Material dark-theme inspired):
+  solid cool grays instead of white-at-alpha, so it reads calmer and more "product
+  UI". `colors.accent` is pulled down in saturation to sit quietly next to the
+  grays rather than glow.
 
-  - 50% = `#E6EDF380`
-  - 30% = `#E6EDF34D`
-  - 15% = `#E6EDF326`
-  - 6% = `#E6EDF30F`
+  For Penpot / 8-digit hex notation (`text`-based alphas):
+
+  - 50% = `#E8EAED80`
+  - 30% = `#E8EAED4D`
+  - 15% = `#E8EAED26`
+  - 6% = `#E8EAED0F`
 
   `colors.border` is retained as a reusable theme token, but the tree line in the
   reference uses `colors.text` with a `0.4px` stroke. The page itself has no
@@ -73,8 +78,8 @@
 
   ```yaml
   typography:
-    body: '"Instrument Sans", system-ui, sans-serif'
-    heading: '"Instrument Sans", system-ui, sans-serif'
+    body: '"Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+    heading: '"Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
     baseSize: 14px
     lineHeight: "1.2"

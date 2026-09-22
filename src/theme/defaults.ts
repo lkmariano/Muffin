@@ -1,23 +1,23 @@
 import type { ThemeTokens } from "./css.js";
 
 const INSTRUMENT_SANS_STACK =
-  '"Instrument Sans", system-ui, sans-serif';
+  '"Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 const SYSTEM_MONO_FONT =
   "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
 
-// Finalized Muffin v1 defaults — transcribed from DESIGN.md (colors §2,
-// typography §3, spacing §4, layout §5, radius §10).
+// Finalized Muffin v1 defaults — transcribed from the v1 preview palette
+// (cold, low-saturation Chrome dark: solid cool grays + muted green accent).
 export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   colors: {
-    text: "#E6EDF3",
-    muted: "#E6EDF380",
-    background: "#1A1D23",
-    link: "#6BEFA9",
-    border: "#E6EDF34D",
-    accent: "#6BEFA9",
-    code: "#E6EDF3",
-    codeBackground: "#E6EDF30F",
-    codeBorder: "#E6EDF326",
+    text: "#E8EAED",
+    muted: "#9AA0A6",
+    background: "#202124",
+    link: "#81C995",
+    border: "#3C4043",
+    accent: "#81C995",
+    code: "#E8EAED",
+    codeBackground: "#292A2D",
+    codeBorder: "#3C4043",
   },
   typography: {
     body: INSTRUMENT_SANS_STACK,

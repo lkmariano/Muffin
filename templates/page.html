@@ -57,6 +57,84 @@
         var toggle = document.getElementById('explorer-toggle-all');
         if (!content || !toggle) return;
 
+        var reduceMotion = !!(window.matchMedia &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        var DURATION = 200;
+
+        /* Animated disclosure: every <details> in the Explorer and the TOC
+           goes through this. Respects prefers-reduced-motion (snaps) and
+           falls back to a plain toggle where Element.animate is unavailable
+           (jsdom, older browsers), so state still restores and persists. */
+        function animatedDetails(details) {
+          var summary = details.querySelector(':scope > summary');
+          if (!summary) return null;
+          var anim = null;
+
+          function openHeight() {
+            var after = summary.nextElementSibling;
+            return summary.offsetHeight + (after ? after.offsetHeight : 0);
+          }
+          function run(from, to, after) {
+            if (anim) anim.cancel();
+            details.style.overflow = 'hidden';
+            anim = details.animate(
+              { height: [from + 'px', to + 'px'] },
+              { duration: DURATION, easing: 'ease-out' }
+            );
+            anim.onfinish = function () {
+              details.style.height = '';
+              details.style.overflow = '';
+              anim = null;
+              after();
+            };
+          }
+          function close(onDone) {
+            if (!details.open) { if (onDone) onDone(); return; }
+            if (reduceMotion || !details.animate) {
+              details.open = false;
+              if (onDone) onDone();
+              return;
+            }
+            run(details.offsetHeight, summary.offsetHeight, function () {
+              details.open = false;
+              if (onDone) onDone();
+            });
+          }
+          function open(onDone) {
+            if (details.open) { if (onDone) onDone(); return; }
+            if (reduceMotion || !details.animate) {
+              details.open = true;
+              if (onDone) onDone();
+              return;
+            }
+            var from = details.offsetHeight;
+            details.open = true;
+            run(from, openHeight(), onDone || function () {});
+          }
+
+          summary.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (details.open) close(); else open();
+          });
+
+          return { open: open, close: close };
+        }
+
+        var controllers = new Map();
+        Array.prototype.forEach.call(
+          document.querySelectorAll('nav details, aside .toc > details'),
+          function (details) {
+            var c = animatedDetails(details);
+            if (c) controllers.set(details, c);
+          }
+        );
+
+        function setFolder(detail, open) {
+          var c = controllers.get(detail);
+          if (c) { if (open) c.open(); else c.close(); }
+          else detail.open = open;
+        }
+
         function storageKey() {
           var basePath = document.body && document.body.getAttribute('data-base-path');
           return 'muffin:explorer:v1:' + (basePath || '/');
@@ -82,9 +160,10 @@
           var key = detail.getAttribute('data-folder-path');
           if (!key) return;
           if (Object.prototype.hasOwnProperty.call(folders, key)) {
-            detail.open = !!folders[key];
+            setFolder(detail, !!folders[key]);
           }
           detail.addEventListener('toggle', function () {
+            if (!key) return;
             folders[key] = detail.open;
             reflect();
             save();
@@ -102,14 +181,20 @@
         }
 
         toggle.addEventListener('click', function () {
-          var next = !allFoldersOpen();
+          if (details.length === 0) { reflect(); return; }
+          var opening = !allFoldersOpen();
+          var remaining = details.length;
           details.forEach(function (detail) {
             var key = detail.getAttribute('data-folder-path');
-            detail.open = next;
-            if (key) folders[key] = next;
+            var c = controllers.get(detail);
+            var done = function () {
+              if (key) folders[key] = detail.open;
+              remaining -= 1;
+              if (remaining === 0) { reflect(); save(); }
+            };
+            if (c) { if (opening) c.open(done); else c.close(done); }
+            else { detail.open = opening; done(); }
           });
-          reflect();
-          save();
         });
 
         reflect();

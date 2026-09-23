@@ -10,7 +10,9 @@ import { buildSiteGraph } from "../../src/graph/backlinks.js";
 import { buildExplorerTree } from "../../src/graph/navigation.js";
 import { renderExplorer } from "../../src/rendering/explorer.js";
 import { getSlug, toHtmlPath } from "../../util.js";
-import { copyAssets, writeStaticAssets } from "../../src/output/assets.js";
+import { resolveSiteUrl, withBasePath } from "../../basePath.js";
+import { copyAssets, writeStaticAssets, writeSyndication } from "../../src/output/assets.js";
+import { renderRssFeed, renderSitemap } from "../../src/output/syndication.js";
 import { writePages } from "../../src/output/writer.js";
 import { loadPageTemplate } from "../../src/output/templates.js";
 import { renderPage } from "../../src/rendering/page.js";
@@ -23,6 +25,7 @@ import { cleanupTempDir, makeTempDir, writeFile } from "../helpers.js";
 let dir: string;
 
 const ORIGINAL_BASE_PATH = process.env.MUFFIN_BASE_PATH;
+const ORIGINAL_SITE_URL = process.env.MUFFIN_SITE_URL;
 
 beforeEach(() => {
   dir = makeTempDir();
@@ -34,6 +37,11 @@ afterEach(() => {
     delete process.env.MUFFIN_BASE_PATH;
   } else {
     process.env.MUFFIN_BASE_PATH = ORIGINAL_BASE_PATH;
+  }
+  if (ORIGINAL_SITE_URL === undefined) {
+    delete process.env.MUFFIN_SITE_URL;
+  } else {
+    process.env.MUFFIN_SITE_URL = ORIGINAL_SITE_URL;
   }
 });
 
@@ -74,6 +82,9 @@ async function renderVault(files: Record<string, string>, options: ParseVaultOpt
   const outputRoot = path.join(vaultDir, "muffin");
   const metadata: PageMetadata[] = [];
   const pages: Array<{ path: string; renderedHtml: string }> = [];
+  const pageModels: Page[] = [];
+  const origin = resolveSiteUrl("");
+  const rssHref = origin === "" ? "" : origin + withBasePath("/feed.xml");
   for (const content of contents) {
     const parsedContent = parsed.find((p) => p.path === content.path);
     if (!parsedContent) continue;
@@ -96,10 +107,11 @@ async function renderVault(files: Record<string, string>, options: ParseVaultOpt
       toc: extractToc(parsedContent.tree),
       content: await renderMarkdownTree(parsedContent.tree),
     };
+    pageModels.push(renderedPage);
     pages.push({
       path: content.path,
       renderedHtml: renderPage(
-        createPresentationContext(renderedPage, site, "", { hasMath }),
+        createPresentationContext(renderedPage, site, "", { hasMath, rssHref }),
         loadPageTemplate(),
       ),
     });
@@ -108,7 +120,7 @@ async function renderVault(files: Record<string, string>, options: ParseVaultOpt
   writePages(pages, { contentRoot: vaultDir, outputRoot });
   writeStaticAssets({ outputRoot, hasMath });
 
-  return { outputRoot, html: pages[0]?.renderedHtml ?? "", metadata };
+  return { outputRoot, html: pages[0]?.renderedHtml ?? "", metadata, pageModels };
 }
 
 describe("content pipeline", () => {
@@ -471,5 +483,56 @@ describe("frontmatter title through the pipeline", () => {
 
     expect(html).toContain("<title>Custom Page Title</title>");
     expect(html).toContain("<h1>Custom Page Title</h1>");
+  });
+});
+
+describe("syndication through the pipeline", () => {
+  it("emits feed.xml and sitemap.xml with absolute base-pathed URLs when an origin is resolved", async () => {
+    process.env.MUFFIN_SITE_URL = "https://example.com";
+    process.env.MUFFIN_BASE_PATH = "/Muffin";
+    const { outputRoot, pageModels, html } = await renderVault({
+      "Home.md": "# Home\n\nWelcome.",
+      "About.md": "# About",
+    });
+
+    const origin = resolveSiteUrl("off");
+    writeSyndication({
+      outputRoot,
+      feedXml: renderRssFeed(pageModels, origin),
+      sitemapXml: renderSitemap(pageModels, origin),
+    });
+
+    const feed = fs.readFileSync(path.join(outputRoot, "feed.xml"), "utf-8");
+    expect(feed).toContain('<rss version="2.0">');
+    expect(feed).toContain("<link>https://example.com/Muffin/</link>");
+    expect(feed).toContain("<link>https://example.com/Muffin/Home.html</link>");
+    expect(feed).toContain("<guid isPermaLink=\"true\">https://example.com/Muffin/About.html</guid>");
+    expect(feed).toContain("<pubDate>Thu, 01 Jan 2026 00:00:00 +0000</pubDate>");
+
+    const sitemap = fs.readFileSync(path.join(outputRoot, "sitemap.xml"), "utf-8");
+    expect(sitemap).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
+    expect(sitemap).toContain("<loc>https://example.com/Muffin/About.html</loc>");
+    expect(sitemap).toContain("<loc>https://example.com/Muffin/Home.html</loc>");
+    expect(sitemap).toContain("<lastmod>2026-01-01</lastmod>");
+
+    expect(html).toContain(
+      '<link rel="alternate" type="application/rss+xml" title="Muffin" href="https://example.com/Muffin/feed.xml">',
+    );
+  });
+
+  it("emits no feed, sitemap, or RSS link when no origin is resolved", async () => {
+    delete process.env.MUFFIN_SITE_URL;
+    delete process.env.MUFFIN_BASE_PATH;
+
+    const { outputRoot, pageModels, html } = await renderVault({ "Home.md": "# Home" });
+    writeSyndication({
+      outputRoot,
+      feedXml: renderRssFeed(pageModels, ""),
+      sitemapXml: renderSitemap(pageModels, ""),
+    });
+
+    expect(fs.existsSync(path.join(outputRoot, "feed.xml"))).toBe(false);
+    expect(fs.existsSync(path.join(outputRoot, "sitemap.xml"))).toBe(false);
+    expect(html).not.toContain("application/rss+xml");
   });
 });

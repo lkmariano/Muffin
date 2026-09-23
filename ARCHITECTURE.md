@@ -407,9 +407,9 @@ The default experience should be opinionated enough to be useful but generic eno
 Site configuration should provide control over site identity and paths without
 requiring a runtime file. Muffin expresses the small set of meaningful
 site-level decisions as compile-time constants in `src/site.ts` (site identity,
-content directory, exclude globs, homepage, output directory) plus a single
-deployment-time environment variable, `MUFFIN_BASE_PATH`, consumed by
-`withBasePath`.
+content directory, exclude globs, homepage, output directory, site URL) plus two
+deployment-time environment variables, `MUFFIN_BASE_PATH` and
+`MUFFIN_SITE_URL`, consumed by `withBasePath` and `resolveSiteUrl`.
 
 At minimum this should cover:
 

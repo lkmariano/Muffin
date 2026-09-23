@@ -2,6 +2,9 @@ export type SiteIdentity = {
   title: string;
   lang: string;
   description?: string;
+  /** Site origin used for absolute URLs (RSS/sitemap). Empty/absent keeps
+   *  feeds disabled; `MUFFIN_SITE_URL` overrides at build time. */
+  url?: string;
 };
 
 export const SITE: SiteIdentity = {

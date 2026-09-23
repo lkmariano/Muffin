@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatDate, getSlug } from "./util.js";
+import { resolveSiteUrl, withBasePath } from "./basePath.js";
 import { buildExplorerTree } from "./src/graph/navigation.js";
 import { renderExplorer } from "./src/rendering/explorer.js";
 import { loadContent } from "./src/content/loader.js";
@@ -10,7 +11,13 @@ import { extractToc } from "./src/content/toc.js";
 import { buildTargetIndex, resolveReferenceFragments } from "./src/content/targets.js";
 import { buildSiteGraph, resolveBacklinks } from "./src/graph/backlinks.js";
 import { writePages } from "./src/output/writer.js";
-import { copyAssets, copyPublicAssets, writeStaticAssets } from "./src/output/assets.js";
+import {
+  copyAssets,
+  copyPublicAssets,
+  writeStaticAssets,
+  writeSyndication,
+} from "./src/output/assets.js";
+import { renderRssFeed, renderSitemap } from "./src/output/syndication.js";
 import { loadPageTemplate } from "./src/output/templates.js";
 import { renderPage } from "./src/rendering/page.js";
 import { createPresentationContext } from "./src/rendering/context.js";
@@ -86,6 +93,7 @@ const OUTPUT_DIR = path.resolve(PROJECT_ROOT, OUTPUT_DIRECTORY);
 
 async function main(): Promise<void> {
   console.log("Parsing markdown files...");
+  const origin = resolveSiteUrl(SITE.url ?? "");
   try {
     const { parsedData, contents, assets, hasMath } = await parseFiles(
       CONTENT_DIR,
@@ -97,12 +105,13 @@ async function main(): Promise<void> {
     } else {
       const explorerTree = buildExplorerTree(contents);
       const template = loadPageTemplate();
+      const rssHref = origin === "" ? "" : origin + withBasePath("/feed.xml");
       const outputPages = parsedData.map((page) => {
         const explorerHtml = renderExplorer(explorerTree, page.relPath);
         return {
           path: page.path,
           renderedHtml: renderPage(
-            createPresentationContext(page, SITE, explorerHtml, { hasMath }),
+            createPresentationContext(page, SITE, explorerHtml, { hasMath, rssHref }),
             template,
           ),
         };
@@ -113,6 +122,11 @@ async function main(): Promise<void> {
         outputRoot: OUTPUT_DIR,
       });
       writeStaticAssets({ outputRoot: OUTPUT_DIR, hasMath });
+      writeSyndication({
+        outputRoot: OUTPUT_DIR,
+        feedXml: renderRssFeed(parsedData, origin),
+        sitemapXml: renderSitemap(parsedData, origin),
+      });
     }
     copyAssets(assets, { outputRoot: OUTPUT_DIR });
     copyPublicAssets(path.join(PROJECT_ROOT, "public"), { outputRoot: OUTPUT_DIR });

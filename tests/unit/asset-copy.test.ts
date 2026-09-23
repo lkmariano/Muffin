@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { copyAssets, copyPublicAssets, writeStaticAssets } from "../../src/output/assets.js";
+import {
+  copyAssets,
+  copyPublicAssets,
+  writeStaticAssets,
+  writeSyndication,
+} from "../../src/output/assets.js";
 import type { LoadedAsset } from "../../src/content/loader.js";
 import { cleanupTempDir, makeTempDir, writeFile } from "../helpers.js";
 
@@ -90,6 +95,45 @@ describe("writeStaticAssets", () => {
     writeStaticAssets({ outputRoot, hasMath: false });
 
     expect(fs.existsSync(path.join(outputRoot, "katex"))).toBe(false);
+  });
+});
+
+describe("writeSyndication", () => {
+  it("writes feed.xml and sitemap.xml when the XML is non-empty", () => {
+    writeSyndication({
+      outputRoot,
+      feedXml: '<rss version="2.0"></rss>',
+      sitemapXml: '<urlset></urlset>',
+    });
+
+    expect(fs.readFileSync(path.join(outputRoot, "feed.xml"), "utf-8")).toBe(
+      '<rss version="2.0"></rss>',
+    );
+    expect(fs.readFileSync(path.join(outputRoot, "sitemap.xml"), "utf-8")).toBe(
+      "<urlset></urlset>",
+    );
+  });
+
+  it("removes stale feed.xml and sitemap.xml when the XML is empty", () => {
+    writeSyndication({ outputRoot, feedXml: "<rss></rss>", sitemapXml: "<urlset></urlset>" });
+    expect(fs.existsSync(path.join(outputRoot, "feed.xml"))).toBe(true);
+    expect(fs.existsSync(path.join(outputRoot, "sitemap.xml"))).toBe(true);
+
+    writeSyndication({ outputRoot, feedXml: "", sitemapXml: "" });
+
+    expect(fs.existsSync(path.join(outputRoot, "feed.xml"))).toBe(false);
+    expect(fs.existsSync(path.join(outputRoot, "sitemap.xml"))).toBe(false);
+    expect(fs.readdirSync(outputRoot)).toEqual([]);
+  });
+
+  it("prunes each file independently", () => {
+    writeSyndication({ outputRoot, feedXml: "", sitemapXml: "<urlset></urlset>" });
+    expect(fs.existsSync(path.join(outputRoot, "feed.xml"))).toBe(false);
+    expect(fs.readFileSync(path.join(outputRoot, "sitemap.xml"), "utf-8")).toBe("<urlset></urlset>");
+
+    writeSyndication({ outputRoot, feedXml: "<rss></rss>", sitemapXml: "" });
+    expect(fs.readFileSync(path.join(outputRoot, "feed.xml"), "utf-8")).toBe("<rss></rss>");
+    expect(fs.existsSync(path.join(outputRoot, "sitemap.xml"))).toBe(false);
   });
 });
 

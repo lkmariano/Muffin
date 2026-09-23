@@ -15,10 +15,13 @@ export type PresentationContext = {
   page: Page;
   explorerHtml: string;
   hasMath: boolean;
+  /** Absolute feed URL (origin + base-pathed /feed.xml); "" disables it. */
+  rssHref: string;
 };
 
 export type PresentationOptions = {
   hasMath?: boolean;
+  rssHref?: string;
 };
 
 export function createPresentationContext(
@@ -32,5 +35,6 @@ export function createPresentationContext(
     page,
     explorerHtml,
     hasMath: options.hasMath === true,
+    rssHref: options.rssHref ?? "",
   };
 }

@@ -15,6 +15,7 @@ export function renderPage(
     site,
     explorerHtml,
     hasMath,
+    rssHref,
     page: { relPath, slug, title, metadata, content, backlinks, toc },
   } = context;
 
@@ -26,6 +27,10 @@ export function renderPage(
     hasMath
       ? `<link rel="stylesheet" href="${withBasePath("/katex/katex.min.css")}">`
       : "";
+  const rssLink =
+    rssHref === ""
+      ? ""
+      : `<link rel="alternate" type="application/rss+xml" title="${escapeAttr(site.title)}" href="${escapeAttr(rssHref)}">`;
 
   const descriptionMeta =
     site.description === undefined
@@ -45,6 +50,7 @@ export function renderPage(
     .replaceAll("{{NAV}}", explorerHtml)
     .replaceAll("{{CSS}}", cssHref)
     .replaceAll("{{KATEX_CSS}}", katexCss)
+    .replaceAll("{{RSS_LINK}}", rssLink)
     .replaceAll("{{PAGE_META}}", renderPageMeta(metadata))
     .replaceAll("{{BODY_ATTRS}}", bodyAttrs)
     .replaceAll("{{CONTENT}}", content);

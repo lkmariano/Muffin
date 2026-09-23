@@ -18,6 +18,31 @@ export function writeStaticAssets(options: WriteStaticAssetsOptions = {}): void 
   }
 }
 
+export interface WriteSyndicationOptions {
+  outputRoot: string;
+  feedXml: string;
+  sitemapXml: string;
+}
+
+/** Writes feed.xml and sitemap.xml when their XML is non-empty; removes each
+ *  file when its XML is empty (stale-output pruning, mirroring the KaTeX
+ *  gate). */
+export function writeSyndication(options: WriteSyndicationOptions): void {
+  const outputRoot = path.resolve(options.outputRoot);
+  if (options.feedXml) {
+    fs.mkdirSync(outputRoot, { recursive: true });
+    fs.writeFileSync(path.join(outputRoot, "feed.xml"), options.feedXml, "utf-8");
+  } else {
+    fs.rmSync(path.join(outputRoot, "feed.xml"), { force: true });
+  }
+  if (options.sitemapXml) {
+    fs.mkdirSync(outputRoot, { recursive: true });
+    fs.writeFileSync(path.join(outputRoot, "sitemap.xml"), options.sitemapXml, "utf-8");
+  } else {
+    fs.rmSync(path.join(outputRoot, "sitemap.xml"), { force: true });
+  }
+}
+
 export function copyKatexAssets(outputRoot: string): void {
   const katexDir = path.join(outputRoot, "katex");
   fs.mkdirSync(katexDir, { recursive: true });

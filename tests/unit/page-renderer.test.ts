@@ -195,4 +195,23 @@ describe("renderPage", () => {
     expect(html).toContain("<body></body>");
     expect(html).not.toContain("toc-list");
   });
+
+  it("emits an RSS alternate link only when rssHref is set", () => {
+    const template = "<head>{{RSS_LINK}}</head>";
+
+    const withRss = renderPage(
+      makeContext({}, site, { rssHref: "https://example.com/feed.xml" }),
+      template,
+    );
+    expect(withRss).toContain(
+      '<head><link rel="alternate" type="application/rss+xml" title="Muffin" href="https://example.com/feed.xml"></head>',
+    );
+
+    const noRss = renderPage(makeContext(), template);
+    expect(noRss).toContain("<head></head>");
+    expect(noRss).not.toContain("{{");
+
+    const blankRss = renderPage(makeContext({}, site, { rssHref: "" }), template);
+    expect(blankRss).toContain("<head></head>");
+  });
 });

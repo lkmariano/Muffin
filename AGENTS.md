@@ -24,11 +24,13 @@ Configuration → Content → Transformers → Site Graph → Renderer → Outpu
 
 Site identity and paths come from compile-time constants in `src/site.ts`
 (`SITE`, `CONTENT_DIRECTORY`, `EXCLUDE_GLOBS`, `HOMEPAGE`, `OUTPUT_DIRECTORY`),
-not a runtime config file. The only build-time knob is the `MUFFIN_BASE_PATH`
-environment variable, which `withBasePath()` (`basePath.ts`) reads at call time
-to prefix all generated URLs (internal links, asset embeds, CSS/KaTeX hrefs,
-`<body data-base-path>`). `SITE` + the base path feed the renderer, and
-`HOMEPAGE` + `OUTPUT_DIRECTORY` feed output.
+not a runtime config file. The build-time knobs are the `MUFFIN_BASE_PATH` and
+`MUFFIN_SITE_URL` environment variables, both read at call time by `basePath.ts`
+(`withBasePath()` prefixes all generated URLs — internal links, asset embeds,
+CSS/KaTeX hrefs, `<body data-base-path>`; `resolveSiteUrl()` resolves the site
+origin used by RSS/sitemap output, falling back to the compile-time `SITE.url`).
+`SITE` + the base path feed the renderer, and `HOMEPAGE` + `OUTPUT_DIRECTORY`
+feed output.
 
 - **Content boundary:** `src/content/loader.ts` is the only module that
   discovers and reads source-vault files; `loadContent(directory, exclude)`
@@ -55,8 +57,11 @@ to prefix all generated URLs (internal links, asset embeds, CSS/KaTeX hrefs,
   surfaced only when `frontmatter.status` is a string. Frontmatter `tags` (YAML list or single string) are normalized to
   `tags: string[]` in page metadata via `normalizeTags`
   (`src/content/frontmatter.ts`); `tags` is always present (empty array when no
-  tags exist). No inline `#tags`, tag pages, tag index, tag navigation, or tag
-  graph exists yet. Do not pass raw strings between modules.
+  tags exist). Arbitrary frontmatter (e.g. `type`) is preserved verbatim in
+  `Page.metadata.frontmatter` and opaque to core — no page-type interpretation,
+  rendering branches, or registries. No inline `#tags`, tag pages, tag index,
+  tag navigation, or tag graph exists yet. Do not pass raw strings between
+  modules.
   The domain `Page` model lives in `src/domain/page.ts`.
 - **Page identity:** the root-relative `relPath` is the canonical identity for
   the TargetIndex and SiteGraph (and backlink keys) — NOT `getSlug`. Pages with
@@ -111,18 +116,18 @@ builder's renderer code still MUST NOT use DOM APIs at runtime.
 | `./templates/page.html` | HTML shell with `{{PLACEHOLDER}}` tokens + a `<head>` `js`-class script (pre-paint) and three inline client scripts (Explorer state persistence, the burger drawer, and the scroll-listener TOC scroll-spy; current-page highlighting is server-rendered, no script). Body includes the mobile top bar (`header.topbar` with `#nav-toggle`) + `#nav-backdrop`, and `<nav id="site-nav">` |
 | `./templates/styles.css` | self-contained global stylesheet — Google Fonts `@import` (first rule) + the full Muffin v1 token set in `:root` (colors, Instrument Sans typography 400/600/700, spacing 1–7, layout columns nav 190px / main 700px with one top edge `pageTop`, radius 0), CSS variable layout + state rules: `:focus-visible` ring, current-page Explorer note/folder, TOC `has-spy`/`is-passed`, one-top-edge grid (`align-items: first baseline` at `--layout-page-top`), compact 15px/2px Explorer tree with aligned root notes, 1px-stroke SVG chevrons in 25px/15px boxes, the collapsible TOC `<details>` header (with `:has()` collapse spacing), and the `<899px` burger/drawer nav (`.js`-gated) |
 | `./public/` | project-level static passthrough — contents copied verbatim into the output root by `copyPublicAssets()` (never parsed/transformed as Markdown); empty/missing dir is a no-op |
-| `./src/site.ts` | build-time site constants: `SiteIdentity` type (`{ title, lang }` — no `basePath`/`description` keys), `SITE`, `CONTENT_DIRECTORY`, `EXCLUDE_GLOBS`, `HOMEPAGE`, `OUTPUT_DIRECTORY` |
+| `./src/site.ts` | build-time site constants: `SiteIdentity` type (`{ title, lang, url? }` — no `basePath`/`description` keys), `SITE`, `CONTENT_DIRECTORY`, `EXCLUDE_GLOBS`, `HOMEPAGE`, `OUTPUT_DIRECTORY` |
 | `./src/content/` | sole source-vault boundary: discovery/read + frontmatter parse (`loader.ts` → `loadContent(directory, exclude)` → `LoadedContent` `{ path, relPath, frontmatter, body, mtime }` + `LoadedAsset[]` for images + PDFs + `slugMap`); frontmatter normalization + title precedence (`frontmatter.ts` → `normalizeTags`/`resolvePageTitle`); markdown parse/render (`markdown.ts` — `parseMarkdown` + `renderMarkdownTree`; `renderMarkdown` is a test-only convenience; GFM, math, highlights/comments, callouts, and heading/block anchors handled in-repo here); heading IDs + block IDs (`anchors.ts` — pure slugging/ID assignment, no fs); reference target index + fragment resolution (`targets.ts` — `buildTargetIndex`/`resolveReferenceFragments`, relPath-keyed, no fs); build-time TOC extraction (`toc.ts` — `extractToc`, depth 1–3, data only, no HTML) |
 | `./src/graph/` | backlink graph (`backlinks.ts`, relPath-keyed; `resolveBacklinks(graph, relPath)`) + explorer tree (`navigation.ts`, built from `LoadedContent.relPath` — no filesystem access) |
 | `./src/domain/` | models: `page.ts` (`Page`, `Backlink`, `TocEntry`, `PageMetadata`), `siteGraph.ts` (`SiteGraph`), `explorer.ts` (`ExplorerNode`) |
-| `./src/rendering/` | pure HTML generation — `context.ts` (`PresentationContext` + `createPresentationContext(page, site, explorerHtml, { hasMath })`), `page.ts` (`renderPage(context, template)`; body attrs `data-slug`/`data-relpath`/`data-base-path` from the `MUFFIN_BASE_PATH` env; TOC rendered as a collapsible `<details>` with an `aside-chevron` SVG, backlinks under `h2.aside-title`, mtime date displayed human-readable), `explorer.ts` (`renderExplorer(nodes, currentRelPath?)` — `data-explorer-path` on files, `data-folder-path` on folders, SVG folder chevrons, `aria-current="page"` + `explorer-current` on the matching file, `explorer-active-folder` on ancestor folders, attribute escaping; hrefs base-pathed via `withBasePath`) — no `fs` imports |
-| `./src/output/` | file writing + stale-output pruning (`writer.ts`), static assets + KaTeX + vault-asset copying + public passthrough (`assets.ts`: `writeStaticAssets({ outputRoot, hasMath })`/`copyAssets`/`copyPublicAssets`), template loading (`templates.ts`) |
+| `./src/rendering/` | pure HTML generation — `context.ts` (`PresentationContext` + `createPresentationContext(page, site, explorerHtml, { hasMath, rssHref })`), `page.ts` (`renderPage(context, template)`; body attrs `data-slug`/`data-relpath`/`data-base-path` from the `MUFFIN_BASE_PATH` env; RSS alternate link from `rssHref`; TOC rendered as a collapsible `<details>` with an `aside-chevron` SVG, backlinks under `h2.aside-title`, mtime date displayed human-readable), `explorer.ts` (`renderExplorer(nodes, currentRelPath?)` — `data-explorer-path` on files, `data-folder-path` on folders, SVG folder chevrons, `aria-current="page"` + `explorer-current` on the matching file, `explorer-active-folder` on ancestor folders, attribute escaping; hrefs base-pathed via `withBasePath`) — no `fs` imports |
+| `./src/output/` | file writing + stale-output pruning (`writer.ts`), static assets + KaTeX + vault-asset copying + public passthrough + feed/sitemap gating (`assets.ts`: `writeStaticAssets({ outputRoot, hasMath })`/`copyAssets`/`copyPublicAssets`/`writeSyndication({ outputRoot, feedXml, sitemapXml })`), RSS + sitemap generation (`syndication.ts` — `renderRssFeed`/`renderSitemap`, pure, no fs, `Page[]` + origin only; no filtering/rediscovery, arbitrary frontmatter is opaque), template loading (`templates.ts`) |
 | `./plugins/` | `wikilinks.ts` (target resolution + URL construction, incl. `[[note#Heading]]`/`[[note#^block-id]]` fragment parsing) and `image-embeds.ts` (Obsidian `![[...]]` embeds — image + PDF syntax, resolution, and base-path-aware URLs) |
 | `./tests/` | vitest unit + integration tests, shared helpers |
 | `./muffin/` | build output (gitignored) |
 | `ARCHITECTURE.md` | design philosophy + architectural direction — not current-state documentation |
-| `basePath.ts` | `withBasePath()` — URL prefixing from `MUFFIN_BASE_PATH` (read at call time; `BASE_PATH` const unused) |
-| `util.ts` | slug/title/date/path helpers (`getSlug`, `getTitle`, `formatDate`, `toHtmlPath`) |
+| `basePath.ts` | `withBasePath()` — URL prefixing from `MUFFIN_BASE_PATH` (read at call time; `BASE_PATH` const unused); `resolveSiteUrl()` — site origin from `MUFFIN_SITE_URL` (read at call time) falling back to the argument (build passes `SITE.url`); trailing slashes stripped |
+| `util.ts` | slug/title/date/path helpers (`getSlug`, `getTitle`, `formatDate`, `formatRfc822`, `toHtmlPath`) |
 | `vitest.config.ts` | vitest configuration |
 
 ## Tests
@@ -146,7 +151,7 @@ tests run the pipeline end-to-end on temp dirs via `tests/helpers.ts`
 ## Pipeline Flow
 
 ```
-(compile-time site constants + MUFFIN_BASE_PATH env → src/site.ts + basePath.ts)
+(compile-time site constants + MUFFIN_BASE_PATH/MUFFIN_SITE_URL env → src/site.ts + basePath.ts)
   → loadContent(SITE dirs: CONTENT_DIRECTORY resolved against PROJECT_ROOT, EXCLUDE_GLOBS)  → src/content/loader.ts
   → recursive getMarkdownFiles → LoadedContent[]
   → slugMap: slug → candidate relPaths (supports duplicate filenames)
@@ -158,9 +163,9 @@ tests run the pipeline end-to-end on temp dirs via `tests/helpers.ts`
   → renderMarkdownTree → HTML (GFM + KaTeX math + callouts; rehype-stage, from the same parsed ASTs) → src/content/markdown.ts
   → buildExplorerTree (from LoadedContent.relPath, no fs)       → src/graph/navigation.ts
   → renderExplorer (nodes, page.relPath) per page → NAV html (current page + active folders marked; hrefs base-pathed) → src/rendering/explorer.ts
-  → createPresentationContext (page + site identity + explorer + hasMath) → src/rendering/context.ts
-  → renderPage (context → HTML shell, body attrs data-slug/data-relpath/data-base-path, collapsible TOC `<details>` + backlinks sections) → src/rendering/page.ts
-  → writePages + writeStaticAssets (self-contained styles.css; katex assets via copyKatexAssets) + copyAssets (vault images/PDFs) + copyPublicAssets (./public passthrough) → src/output/writer.ts + assets.ts
+  → createPresentationContext (page + site identity + explorer + hasMath + rssHref) → src/rendering/context.ts
+  → renderPage (context → HTML shell, body attrs data-slug/data-relpath/data-base-path, RSS alternate link, collapsible TOC `<details>` + backlinks sections) → src/rendering/page.ts
+  → writePages + writeStaticAssets (self-contained styles.css; katex assets via copyKatexAssets) + writeSyndication (feed.xml/sitemap.xml via renderRssFeed/renderSitemap, gated on an origin) + copyAssets (vault images/PDFs) + copyPublicAssets (./public passthrough) → src/output/writer.ts + assets.ts + syndication.ts
   → ./muffin/ (mirrors folder structure)
 ```
 
@@ -215,9 +220,13 @@ tests run the pipeline end-to-end on temp dirs via `tests/helpers.ts`
   `copyPublicAssets()` copies a project-level `public/` directory through
   verbatim (empty/missing is a no-op). `writePages()` also prunes stale `.html`
   output so `./muffin/` mirrors the current content set
-  (`src/output/writer.ts` + `src/output/assets.ts`).
+  (`src/output/writer.ts` + `src/output/assets.ts`). `writeSyndication()` writes
+  `feed.xml`/`sitemap.xml` when an origin resolves (`MUFFIN_SITE_URL` env or
+  `SITE.url`; absent/empty keeps both disabled and prunes any stale copies);
+  both files carry absolute URLs composed as `origin + withBasePath("/" +
+  toHtmlPath(relPath))`.
 - **Template tokens:** `{{TITLE}}`, `{{CONTENT}}`, `{{TOC}}`, `{{BACKLINKS}}`,
-  `{{NAV}}`, `{{CSS}}`, `{{KATEX_CSS}}`, `{{PAGE_META}}`,
+  `{{NAV}}`, `{{CSS}}`, `{{KATEX_CSS}}`, `{{RSS_LINK}}`, `{{PAGE_META}}`,
   `{{SITE_TITLE}}`, `{{LANG}}`, `{{SITE_DESCRIPTION}}`, `{{BODY_ATTRS}}`
   (`data-slug`/`data-relpath`/`data-base-path`). `{{CSS}}` is
   `<link rel="stylesheet" href=".../styles.css">` base-pathed via
@@ -229,7 +238,10 @@ tests run the pipeline end-to-end on temp dirs via `tests/helpers.ts`
   `withBasePath`) only when the vault contains math; otherwise it resolves to an
   empty string and the KaTeX assets are not emitted. Math presence is a site-wide
   flag computed in `parseFiles` via `containsMath` over the parsed mdast trees
-  (`src/content/markdown.ts`).
+  (`src/content/markdown.ts`). `{{RSS_LINK}}` is `<link rel="alternate"
+  type="application/rss+xml" …>` pointing at `origin + withBasePath("/feed.xml")`
+  (threaded through `PresentationContext.rssHref`) only when an origin resolves;
+  otherwise it is an empty string.
 - **Client scripts (no-build behavior):** `templates/page.html` ships three
   small scripts. The Explorer script persists folder `details` open state under
   the key `muffin:explorer:v1:{body[data-base-path]|"/"}` (`{ folders: {<relPath>:
@@ -256,4 +268,6 @@ tests run the pipeline end-to-end on temp dirs via `tests/helpers.ts`
 ## Deployment
 
 `.github/workflows/deploy.yaml` builds and deploys to GitHub Pages on push to
-`main`, with `MUFFIN_BASE_PATH: /Muffin` set in CI (consumed by `withBasePath`).
+`main`, with `MUFFIN_BASE_PATH: /Muffin` and
+`MUFFIN_SITE_URL: https://${{ github.repository_owner }}.github.io/Muffin` set in
+CI (consumed by `withBasePath` and `resolveSiteUrl`, respectively).

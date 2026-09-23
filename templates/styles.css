@@ -44,7 +44,7 @@
   --radius-md: 0;
 }
 
-/* Muffin v1 default presentation (DESIGN.md).
+/* Muffin v1 default presentation.
    Every visual value comes from the :root tokens above; this stylesheet owns
    only role-to-component mapping and responsive arrangement. */
 
@@ -71,7 +71,7 @@ body.nav-locked {
   overflow: hidden;
 }
 
-/* Visible keyboard focus (DESIGN.md §13). */
+/* Visible keyboard focus. */
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
@@ -81,8 +81,8 @@ a {
   color: var(--color-link);
 }
 
-/* ---------- Three-column desktop layout (DESIGN.md §5) ----------
-   ALIGNMENT SYSTEM (from DESIGN.md):
+/* ---------- Three-column desktop layout ----------
+   ALIGNMENT SYSTEM:
    1. One top edge — every column starts at --layout-page-top and the
       grid uses `align-items: first baseline`, so the first line of the
       left column ("Muffin"), the page title, and the first heading of the
@@ -279,7 +279,7 @@ nav a[aria-current="page"] {
   color: var(--color-text);
 }
 
-/* Active folder uses the accent treatment (DESIGN.md §6.1, §12). */
+/* Active folder uses the accent treatment. */
 nav li.explorer-active-folder > details > summary {
   color: var(--color-accent);
 }
@@ -349,7 +349,7 @@ main {
   text-transform: uppercase;
 }
 
-/* Content headings (DESIGN.md §3 text styles). */
+/* Content headings (§3 text styles). */
 .content h1,
 .content h2,
 .content h3,
@@ -529,7 +529,7 @@ aside {
   text-decoration: underline;
 }
 
-/* ---------- Content elements not in the mockup (DESIGN.md §9) ---------- */
+/* ---------- Content elements not in the mockup ---------- */
 
 pre,
 code {

@@ -276,7 +276,7 @@ describe("content pipeline", () => {
     expect(graph.forwardLinks["Home.md"]).toEqual(["About.md"]);
   });
 
-  it("loads a config-driven build via MUFFIN_BASE_PATH and site constants, honoring exclude and homepage", async () => {
+  it("loads a constant-driven build via MUFFIN_BASE_PATH and site constants, honoring exclude and homepage", async () => {
     const vaultDir = path.join(dir, "notes");
     writeFile(vaultDir, "Home.md", "# Home\n\nWelcome to [[About]].");
     writeFile(vaultDir, "About.md", "# About");

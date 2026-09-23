@@ -194,7 +194,7 @@ An unresolved embed (no matching file) falls back to plain `![[text]]`.
 Optional YAML frontmatter at the top of a page:
 
 ---
-title: ignored (title comes from the filename)
+title: An explicit title wins over the filename
 status: draft
 tags:
   - quick-notes

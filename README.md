@@ -31,8 +31,7 @@ compile-time constants in `src/site.ts`, and the only build-time knob is the
 deployments):
 
 - the full Muffin v1 theme lives in the self-contained `templates/styles.css`
-  (dark colors, Instrument Sans typography 400/600/700, `630px` content measure,
-  transcribed from `DESIGN.md`)
+  (dark colors, Instrument Sans typography 400/600/700, `630px` content measure)
 - site title `Muffin`, language `en`
 - a homepage derived from `Home.md` (falling back to `home.md`/`index.md`),
   aliased to `index.html`
@@ -89,7 +88,7 @@ markdown AST.
 
 ## Page Shell
 
-Each page renders through `templates/page.html`. The `<body>` carries `data-slug`, `data-relpath` (the page's canonical identity, used for current-page highlighting and also read by the Explorer persistence script) and `data-base-path` (the `MUFFIN_BASE_PATH` env, scoping storage keys). The page type concept from earlier phases was removed — Muffin does not ship site-specific page types such as "portfolio" or "home". Pages render from a generic `PresentationContext` (page + `SITE` + explorer HTML), so templates never touch raw build data; the three-column layout, per-page TOC, and backlinks all follow `DESIGN.md`.
+Each page renders through `templates/page.html`. The `<body>` carries `data-slug`, `data-relpath` (the page's canonical identity, used for current-page highlighting and also read by the Explorer persistence script) and `data-base-path` (the `MUFFIN_BASE_PATH` env, scoping storage keys). The page type concept from earlier phases was removed — Muffin does not ship site-specific page types such as "portfolio" or "home". Pages render from a generic `PresentationContext` (page + `SITE` + explorer HTML), so templates never touch raw build data — the three-column layout, per-page TOC, and backlinks are defined entirely by the template, the stylesheet, and the page model.
 
 The template ships three tiny standalone client scripts (all gated so the page works without JS): one persists Explorer folder `details` state (keyed as `muffin:explorer:v1:{basePath}`), one opens the `≤899px` burger drawer, and one drives the TOC scroll-spy (`.has-spy`/`.is-passed`, `aria-current="location"`). Current-page highlighting needs no script — it is rendered per page at build time. All storage access is wrapped in try/catch so the page works even when storage is unavailable.
 

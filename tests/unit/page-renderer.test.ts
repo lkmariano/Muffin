@@ -18,7 +18,7 @@ const TEMPLATE = `<!doctype html>
 {{SITE_TITLE}}
 {{CSS}}
 {{NAV}}
-{{PAGE_META}}
+{{PAGE_META}}{{TAGS}}
 {{TOC}}
 {{BACKLINKS}}
 {{CONTENT}}</html>`;
@@ -114,12 +114,15 @@ describe("renderPage", () => {
 
     const present = renderPage(withBacklinks, TEMPLATE);
     expect(present).toContain('<span class="page-status">published</span>');
-    expect(present).toContain('<span class="page-tags">a, b</span>');
+    expect(present).toContain(
+      '<span class="page-updated">Jan 1, 2026</span><span class="page-tags"><span class="page-tag">#a</span> <span class="page-tag">#b</span></span>',
+    );
     expect(present).toContain('<li><a href="/Other.html">Other</a></li>');
     expect(present).toContain("Backlinks");
 
     const absent = renderPage(makeContext(), TEMPLATE);
     expect(absent).not.toContain("Backlinks");
+    expect(absent).not.toContain("page-tags");
   });
 
   it("escapes user content in attributes and text", () => {

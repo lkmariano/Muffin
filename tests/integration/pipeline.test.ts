@@ -61,11 +61,11 @@ async function parseVault(files: Record<string, string>, options: ParseVaultOpti
   for (const [relPath, body] of Object.entries(files)) {
     writeFile(vaultDir, relPath, body);
   }
-  const { contents, assets, slugMap } = await loadContent(vaultDir, options.exclude ?? []);
+  const { contents, assets, slugMap, aliasMap } = await loadContent(vaultDir, options.exclude ?? []);
   const assetPaths = assets.map((asset) => asset.relPath);
   const parsed: Array<{ path: string; relPath: string; tree: Root }> = [];
   for (const content of contents) {
-    const tree = await parseMarkdown(content.body, slugMap, content.relPath, assetPaths);
+    const tree = await parseMarkdown(content.body, slugMap, content.relPath, assetPaths, aliasMap);
     parsed.push({ path: content.path, relPath: content.relPath, tree });
   }
   const targetIndex = buildTargetIndex(parsed);
@@ -477,6 +477,50 @@ describe("frontmatter tags through the pipeline", () => {
       (m) => Array.isArray(m.frontmatter.tags) && m.frontmatter.tags[0] === "TypeScript",
     );
     expect(ordered?.tags).toEqual(["TypeScript", "Muffin", "Programming"]);
+  });
+
+  it("normalizes every Obsidian-style tag shape from frontmatter", async () => {
+    const { metadata } = await renderVault({
+      "BlockHash.md": "---\ntags:\n  - #technical\n  - #writings\n---\n\n# Block Hash",
+      "FlowHash.md": "---\ntags: [#guide, #links]\n---\n\n# Flow Hash",
+      "ScalarHash.md": "---\ntags: #solo\n---\n\n# Scalar Hash",
+      "Empty.md": "---\ntags: []\n---\n\n# Empty",
+      "Plain.md": "# Plain",
+    });
+
+    expect(
+      metadata.find((m) => Array.isArray(m.frontmatter.tags) && m.frontmatter.tags[0] === "#technical")
+        ?.tags,
+    ).toEqual(["technical", "writings"]);
+    const flow = metadata.find(
+      (m) => Array.isArray(m.frontmatter.tags) && m.frontmatter.tags[0] === "#guide",
+    );
+    expect(flow?.frontmatter.tags).toEqual(["#guide", "#links"]);
+    expect(flow?.tags).toEqual(["guide", "links"]);
+    expect(metadata.find((m) => m.frontmatter.tags === "#solo")?.tags).toEqual(["solo"]);
+    expect(
+      metadata.find((m) => Array.isArray(m.frontmatter.tags) && m.frontmatter.tags.length === 0)
+        ?.tags,
+    ).toEqual([]);
+    expect(metadata.find((m) => Object.keys(m.frontmatter).length === 0)?.tags).toEqual([]);
+  });
+});
+
+describe("aliases through the pipeline", () => {
+  it("resolves [[Alias]] wikilinks to the page declaring that alias", async () => {
+    const files: Record<string, string> = {
+      "Home.md": "See [[Deep Thoughts|deep]].\n\nReal file: [[Reference]].\n\nAlias: [[Note|note alias]].",
+      "notes/Reference.md": "---\naliases:\n  - Note\n  - Deep Thoughts\n---\n\n# Reference",
+      "Reference.md": "# Real Reference",
+    };
+
+    const { html } = await renderVault(files);
+
+    // Alias wikilinks resolve to the alias-declaring file (in its subfolder).
+    expect(html).toContain('<a href="/notes/Reference.html">deep</a>');
+    expect(html).toContain('<a href="/notes/Reference.html">note alias</a>');
+    // A real filename keeps precedence over any alias with the same slug.
+    expect(html).toContain('<a href="/Reference.html">Reference</a>');
   });
 });
 

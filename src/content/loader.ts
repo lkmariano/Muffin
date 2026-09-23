@@ -2,9 +2,34 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import mm from "micromatch";
-import { getSlug } from "../../util.js";
+import { normalizeAliases } from "./frontmatter.js";
+import { compareByteOrder, getSlug } from "../../util.js";
 
 const ASSET_EXTENSION_PATTERN = /\.(png|jpe?g|gif|webp|svg|pdf)$/i;
+
+const FRONTMATTER_RE = /^---\n([\s\S]*?)\n---(\r?\n|$)/;
+const HASH_TAG_BLOCK_ITEM_RE = /^(\s*-\s+)#(\S.*)$/gm;
+const HASH_TAG_FLOW_ITEM_RE = /(\[\s*|,\s*)#([^\s,\]]+)/g;
+const HASH_TAG_SCALAR_RE = /^(\s*[\w.-]+:\s+)#(\S.*)$/gm;
+
+// Obsidian frontmatter writes tags with a leading hash (`- #tag`,
+// `[#a, #b]`, `tags: #tag`). Strict YAML reads `#` as a comment — dropping
+// items or throwing inside flow collections — so hash-prefixed scalars are
+// quoted before parsing. Files without a leading standard frontmatter block
+// pass through.
+function quoteObsidianTags(yaml: string): string {
+  return yaml
+    .replace(HASH_TAG_FLOW_ITEM_RE, '$1"#$2"')
+    .replace(HASH_TAG_BLOCK_ITEM_RE, '$1"#$2"')
+    .replace(HASH_TAG_SCALAR_RE, '$1"#$2"');
+}
+
+function withQuotedHashTagItems(raw: string): string {
+  const match = FRONTMATTER_RE.exec(raw);
+  if (!match) return raw;
+  const frontmatter = quoteObsidianTags(match[1] ?? "");
+  return `---\n${frontmatter}\n---${match[2] ?? ""}${raw.slice(match[0]?.length ?? 0)}`;
+}
 
 export type LoadedContent = {
   path: string;
@@ -23,6 +48,7 @@ export type LoadedContentResult = {
   contents: LoadedContent[];
   assets: LoadedAsset[];
   slugMap: Record<string, string[]>;
+  aliasMap: Record<string, string[]>;
 };
 
 export type FilePredicate = (name: string) => boolean;
@@ -85,7 +111,7 @@ function isExcluded(exclude: string[], relPath: string): boolean {
 
 // Locale-independent byte order so output is reproducible on any filesystem.
 function comparePaths(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
+  return compareByteOrder(a, b);
 }
 
 function sortByRelPath(directory: string, files: string[]): string[] {
@@ -113,6 +139,7 @@ export async function loadContent(
   );
 
   const slugMap: Record<string, string[]> = {};
+  const aliasMap: Record<string, string[]> = {};
 
   const contents: LoadedContent[] = markdownFiles.map((file) => {
     const slug = getSlug(file);
@@ -125,8 +152,16 @@ export async function loadContent(
     slugMap[slug].push(relPath);
 
     const raw = fs.readFileSync(file, "utf-8");
-    const { data, content } = matter(raw);
+    const { data, content } = matter(withQuotedHashTagItems(raw));
     const mtime = fs.statSync(file).mtime;
+
+    for (const alias of normalizeAliases(data as Record<string, unknown>)) {
+      const aliasSlug = getSlug(alias);
+      if (!aliasMap[aliasSlug]) {
+        aliasMap[aliasSlug] = [];
+      }
+      aliasMap[aliasSlug]!.push(relPath);
+    }
 
     return {
       path: file,
@@ -142,5 +177,5 @@ export async function loadContent(
     relPath: requireRelPath(directory, file),
   }));
 
-  return { contents, assets, slugMap };
+  return { contents, assets, slugMap, aliasMap };
 }

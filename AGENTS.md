@@ -54,10 +54,10 @@ feed output.
   formatted as `YYYY-MM-DD` in the domain model, then rendered in the
   page-meta as a human-readable date (e.g. `Sep 21, 2026`, no "Updated "
   prefix) by `formatDisplayDate` in `src/rendering/page.ts`; `status` is
-  surfaced only when `frontmatter.status` is a string. Frontmatter `tags` (YAML list or single string) are normalized to
+  surfaced only when `frontmatter.status` is a string. Frontmatter `tags` accept every YAML shape the vault may use — single string, block list, flow list (`[a, b]`), quoted `"#tag"`, Obsidian-style `#tag` in block/flow/scalar positions, and empty (`[]`/`null`/absent) — hash-prefixed scalars are quoted before YAML parse in `loader.ts`, then leading `#` stripped/whitespace-trimmed/duplicates removed via `normalizeTags`), and are normalized to
   `tags: string[]` in page metadata via `normalizeTags`
   (`src/content/frontmatter.ts`); `tags` is always present (empty array when no
-  tags exist). Arbitrary frontmatter (e.g. `type`) is preserved verbatim in
+  tags exist), rendered as muted Obsidian-style `#tags` beside the date in the page-meta. Arbitrary frontmatter (e.g. `type`) is preserved verbatim in
   `Page.metadata.frontmatter` and opaque to core — no page-type interpretation,
   rendering branches, or registries. No inline `#tags`, tag pages, tag index,
   tag navigation, or tag graph exists yet. Do not pass raw strings between
@@ -242,12 +242,16 @@ pass-through of `renderPage` with a doc comment showing where to branch on
   toHtmlPath(relPath))`.
 - **Template tokens:** `{{TITLE}}`, `{{CONTENT}}`, `{{TOC}}`, `{{BACKLINKS}}`,
   `{{NAV}}`, `{{CSS}}`, `{{KATEX_CSS}}`, `{{RSS_LINK}}`, `{{PAGE_META}}`,
-  `{{SITE_TITLE}}`, `{{LANG}}`, `{{SITE_DESCRIPTION}}`, `{{BODY_ATTRS}}`
+  `{{TAGS}}`, `{{SITE_TITLE}}`, `{{LANG}}`, `{{SITE_DESCRIPTION}}`,
+  `{{BODY_ATTRS}}`
   (`data-slug`/`data-relpath`/`data-base-path`). `{{CSS}}` is
   `<link rel="stylesheet" href=".../styles.css">` base-pathed via
   `withBasePath`. `{{TOC}}` renders a collapsible `<details>` wrapper (SVG
   `aside-chevron`, `.toc-list`) and `{{BACKLINKS}}` renders a `h2.aside-title`
   + `.backlinks-list` — both empty strings when the page has no entries/links.
+  `{{PAGE_META}}` renders the status + updated-date spans and `{{TAGS}}` the
+  muted Obsidian-style `.page-tags` row beside the date (each empty string when
+  absent) — the template owns their `.page-meta` flex wrapper.
   `{{KATEX_CSS}}` is replaced by the complete stylesheet
   `<link rel="stylesheet" href=".../katex/katex.min.css">` (base-pathed via
   `withBasePath`) only when the vault contains math; otherwise it resolves to an

@@ -349,6 +349,10 @@ main {
   text-transform: uppercase;
 }
 
+.page-tags {
+  color: var(--color-muted);
+}
+
 /* Content headings (§3 text styles). */
 .content h1,
 .content h2,

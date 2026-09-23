@@ -1,3 +1,9 @@
+---
+tags:
+  - #reference
+  - #markdown
+---
+
 # Markdown Flavors
 
 Muffin renders this vault with a single Markdown parser (`remark` + GFM), plus
@@ -197,13 +203,14 @@ Optional YAML frontmatter at the top of a page:
 title: An explicit title wins over the filename
 status: draft
 tags:
-  - quick-notes
-  - reference
+  - #quick-notes
+  - #reference
 ---
 
 Content starts here.
 
 - `status` is surfaced in the page footer when it is a string.
-- `tags` (list or single string) are normalized to an array and shown with the
-  page metadata.
+- `tags` (list or single string) are normalized to an array and shown beside the
+  date in the page meta, Obsidian-style (`#tag`); the leading `#` is optional in
+  frontmatter and stripped during normalization.
 - Filenames define titles; `title` in frontmatter is not used.

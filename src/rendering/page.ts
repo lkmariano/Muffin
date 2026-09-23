@@ -52,6 +52,7 @@ export function renderPage(
     .replaceAll("{{KATEX_CSS}}", katexCss)
     .replaceAll("{{RSS_LINK}}", rssLink)
     .replaceAll("{{PAGE_META}}", renderPageMeta(metadata))
+    .replaceAll("{{TAGS}}", renderTags(metadata.tags))
     .replaceAll("{{BODY_ATTRS}}", bodyAttrs)
     .replaceAll("{{CONTENT}}", content);
 }
@@ -62,12 +63,16 @@ function renderPageMeta(metadata: PageMetadata): string {
     metaParts.push(`<span class="page-status">${escapeHtml(metadata.status)}</span>`);
   }
   metaParts.push(`<span class="page-updated">${escapeHtml(formatDisplayDate(metadata.updated))}</span>`);
-  if (metadata.tags.length > 0) {
-    metaParts.push(
-      `<span class="page-tags">${metadata.tags.map((tag) => escapeHtml(tag)).join(", ")}</span>`,
-    );
-  }
-  return `<div class="page-meta">${metaParts.join("")}</div>`;
+  return metaParts.join("");
+}
+
+/** Renders the page's tags as muted Obsidian-style `#tags` — display only.
+ *  Returns an empty string when the page has no tags. */
+function renderTags(tags: string[]): string {
+  if (tags.length === 0) return "";
+  return `<span class="page-tags">${tags
+    .map((tag) => `<span class="page-tag">#${escapeHtml(tag)}</span>`)
+    .join(" ")}</span>`;
 }
 
 const MONTH_NAMES = [

@@ -1,13 +1,15 @@
-import { getSlug, getTitle, toHtmlPath } from "../../util.js";
+import { compareByteOrder, getSlug, getTitle, toHtmlPath } from "../../util.js";
 import type { LoadedContent } from "../content/loader.js";
 import type { ExplorerNode } from "../domain/explorer.js";
 
 export function buildExplorerTree(contents: LoadedContent[]): ExplorerNode[] {
-  const relPaths = contents
-    .map((content) => content.relPath)
-    .filter((relPath) => !hasDotSegment(relPath));
-
-  return buildDirectory(relPaths, "");
+  return buildDirectory(
+    contents
+      .map((content) => content.relPath)
+      .filter((relPath) => !hasDotSegment(relPath))
+      .sort(compareByteOrder),
+    "",
+  );
 }
 
 function hasDotSegment(relPath: string): boolean {
@@ -33,7 +35,7 @@ function buildDirectory(relPaths: string[], folderPath: string): ExplorerNode[] 
     const aFolder = groups[na]!.length > 0;
     const bFolder = groups[nb]!.length > 0;
     if (aFolder !== bFolder) return aFolder ? -1 : 1;
-    return na.localeCompare(nb);
+    return compareByteOrder(na, nb);
   });
 
   return entries.flatMap(([name, restPaths]) => {

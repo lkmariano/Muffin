@@ -30,7 +30,11 @@ export function parseWikilinkTarget(rawTarget: string): WikilinkTarget {
   return { page, fragment: { type: 'heading', text: rawFragment } };
 }
 
-export function wikilinkPlugin(slugsMap: Record<string, string[]>, currentFile: string): (tree: any) => void {
+export function wikilinkPlugin(
+  slugsMap: Record<string, string[]>,
+  currentFile: string,
+  aliasMap: Record<string, string[]> = {},
+): (tree: any) => void {
   return (tree: any): void => {
     findAndReplace(tree, [
       /\[{2}(.+?)\]{2}/g,
@@ -39,7 +43,7 @@ export function wikilinkPlugin(slugsMap: Record<string, string[]>, currentFile: 
         const rawTarget: string = rawTargetPart ?? capturedText;
         const parsedTarget = parseWikilinkTarget(rawTarget);
         const slug = getSlug(parsedTarget.page);
-        const resolved = resolveWikilink(currentFile, slug, slugsMap);
+        const resolved = resolveWikilink(currentFile, slug, slugsMap, aliasMap);
 
         if (resolved) {
           const displayForFragment = (fragment: ReferenceFragment): string =>
@@ -92,8 +96,16 @@ export function wikilinkToUrlPlugin(): (tree: any) => void {
   };
 }
 
-export function resolveWikilink(currentFile: string, slug: string, slugMap: Record<string, string[]>): string | undefined {
-  const candidates = slugMap[slug];
+export function resolveWikilink(
+  currentFile: string,
+  slug: string,
+  slugMap: Record<string, string[]>,
+  aliasMap: Record<string, string[]> = {},
+): string | undefined {
+  // A real filename always wins over an alias: `[[Name]]` resolves through the
+  // slug map when it has any candidate, and aliases are consulted only as a
+  // fallback — an alias can never hijack a real page's name.
+  const candidates = slugMap[slug] ?? aliasMap[slug];
   if (!candidates || candidates.length === 0) {
     return undefined;
   }

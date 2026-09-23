@@ -141,4 +141,4 @@ Each page renders through `templates/page.html`. The `<body>` carries `data-slug
 
 The template ships three tiny standalone client scripts (all gated so the page works without JS): one persists Explorer folder `details` state (keyed as `muffin:explorer:v1:{basePath}`), one opens the `≤899px` burger drawer, and one drives the TOC scroll-spy (`.has-spy`/`.is-passed`, `aria-current="location"`). Current-page highlighting needs no script — it is rendered per page at build time. All storage access is wrapped in try/catch so the page works even when storage is unavailable.
 
-Template tokens: `{{TITLE}}`, `{{CONTENT}}`, `{{TOC}}`, `{{BACKLINKS}}`, `{{NAV}}`, `{{CSS}}`, `{{KATEX_CSS}}`, `{{RSS_LINK}}`, `{{PAGE_META}}`, `{{SITE_TITLE}}`, `{{LANG}}`, `{{SITE_DESCRIPTION}}`, `{{BODY_ATTRS}}`.
+Template tokens: `{{TITLE}}`, `{{CONTENT}}`, `{{TOC}}`, `{{BACKLINKS}}`, `{{NAV}}`, `{{CSS}}`, `{{KATEX_CSS}}`, `{{RSS_LINK}}`, `{{PAGE_META}}`, `{{TAGS}}`, `{{SITE_TITLE}}`, `{{LANG}}`, `{{SITE_DESCRIPTION}}`, `{{BODY_ATTRS}}`.

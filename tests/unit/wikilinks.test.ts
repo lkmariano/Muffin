@@ -58,6 +58,34 @@ describe("resolveWikilink", () => {
     const slugMap = { note: ["content/a/note.md", "content/b/note.md"] };
     expect(resolveWikilink("content/c/page.md", "note", slugMap)).toBe("content/a/note.md");
   });
+
+  it("falls back to the alias map when the slug has no real candidate", () => {
+    const slugMap: Record<string, string[]> = {};
+    const aliasMap = { "my-alias": ["content/real-file.md"] };
+    expect(resolveWikilink("content/page.md", "my-alias", slugMap, aliasMap)).toBe(
+      "content/real-file.md",
+    );
+  });
+
+  it("prefers a real filename over an alias claiming the same slug", () => {
+    const slugMap = { "my-alias": ["content/real-file.md"] };
+    const aliasMap = { "my-alias": ["content/alias-holder.md"] };
+    expect(resolveWikilink("content/page.md", "my-alias", slugMap, aliasMap)).toBe(
+      "content/real-file.md",
+    );
+  });
+
+  it("applies same-folder-first resolution among alias candidates", () => {
+    const slugMap: Record<string, string[]> = {};
+    const aliasMap = { alias: ["content/a/alias.md", "content/projects/alias.md"] };
+    expect(resolveWikilink("content/projects/page.md", "alias", slugMap, aliasMap)).toBe(
+      "content/projects/alias.md",
+    );
+  });
+
+  it("returns undefined when neither map has the slug", () => {
+    expect(resolveWikilink("content/page.md", "missing", {}, {})).toBeUndefined();
+  });
 });
 
 describe("wikilinkPlugin", () => {
@@ -90,6 +118,15 @@ describe("wikilinkPlugin", () => {
 
     const link = expectLink(tree, "the heading");
     expect(link.data.fragmentTarget).toEqual({ type: "heading", text: "Some Heading" });
+  });
+
+  it("resolves a wikilink through the alias map when no real slug matches", () => {
+    const tree = textTree("See [[My Alias]].");
+
+    wikilinkPlugin({}, "content/page.md", { "my-alias": ["content/folder/Real.md"] })(tree);
+
+    const link = expectLink(tree, "Real");
+    expect(link.url).toBe("content/folder/Real.md");
   });
 });
 

@@ -1,3 +1,9 @@
+---
+tags:
+  - #guide
+  - #links
+---
+
 # Wikilinks
 
 Notes can link to each other with Obsidian-style [[Usage|wikilinks]]. Muffin

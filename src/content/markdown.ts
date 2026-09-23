@@ -39,13 +39,14 @@ export async function parseMarkdown(
   slugMap: Record<string, string[]>,
   currentFile: string,
   assetPaths: string[] = [],
+  aliasMap: Record<string, string[]> = {},
 ): Promise<Root> {
   const parser = unified()
     .use(remarkParse)
     .use(remarkGfm, { singleTilde: false })
     .use(remarkMath)
     .use(imageEmbedPlugin, assetPaths, currentFile)
-    .use(wikilinkPlugin, slugMap, currentFile)
+    .use(wikilinkPlugin, slugMap, currentFile, aliasMap)
     .use(ofmInlinePlugin)
     .use(headingIdPlugin)
     .use(blockIdPlugin);
@@ -77,8 +78,9 @@ export async function renderMarkdown(
   slugMap: Record<string, string[]>,
   currentFile: string,
   assetPaths: string[] = [],
+  aliasMap: Record<string, string[]> = {},
 ): Promise<string> {
-  return renderMarkdownTree(await parseMarkdown(body, slugMap, currentFile, assetPaths));
+  return renderMarkdownTree(await parseMarkdown(body, slugMap, currentFile, assetPaths, aliasMap));
 }
 
 // Comments (%%...%%) are removed; highlights (==...==) become semantic

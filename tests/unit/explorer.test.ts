@@ -69,6 +69,19 @@ describe("buildExplorerTree", () => {
     expect(tree[1]?.slug).toBe("my-note");
     expect(tree[1]?.href).toBe("My Note.html");
   });
+
+  it("builds an identical tree regardless of input order (byte-order stable)", async () => {
+    writeFile(dir, "Zulu.md", "# z");
+    writeFile(dir, "Alpha.md", "# a");
+    writeFile(dir, "Middle/One.md", "# one");
+
+    const { contents } = await loadContent(dir);
+    const forward = buildExplorerTree(contents);
+    const reversed = buildExplorerTree([...contents].reverse());
+
+    expect(reversed).toEqual(forward);
+    expect(forward.map((n) => n.name)).toEqual(["Middle", "Alpha", "Zulu"]);
+  });
 });
 
 describe("renderExplorer", () => {

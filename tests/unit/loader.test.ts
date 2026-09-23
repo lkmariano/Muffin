@@ -51,6 +51,35 @@ describe("loadContent", () => {
     expect(note?.body).toContain("# Note");
   });
 
+  it("parses Obsidian-style hash-prefixed tags as strings, not comments", async () => {
+    writeFile(
+      dir,
+      "Page.md",
+      "---\ntitle: My Page\ntags:\n  - #technical\n  - writings\n---\n\nBody with a - #list item in it.",
+    );
+
+    const { contents } = await loadContent(dir);
+    const page = contents[0];
+    expect(page?.frontmatter).toEqual({
+      title: "My Page",
+      tags: ["#technical", "writings"],
+    });
+    expect(page?.body).toBe("\nBody with a - #list item in it.");
+  });
+
+  it("parses flow-list, scalar, and empty tag shapes from frontmatter", async () => {
+    writeFile(dir, "Flow.md", "---\ntags: [#a, #b]\n---\n\n# Flow");
+    writeFile(dir, "Scalar.md", "---\ntags: #technical\n---\n\n# Scalar");
+    writeFile(dir, "Empty.md", "---\ntags: []\n---\n\n# Empty");
+    writeFile(dir, "Null.md", "---\ntags:\n---\n\n# Null");
+
+    const { contents } = await loadContent(dir);
+    expect(contents.find((c) => c.relPath === "Flow.md")?.frontmatter.tags).toEqual(["#a", "#b"]);
+    expect(contents.find((c) => c.relPath === "Scalar.md")?.frontmatter.tags).toBe("#technical");
+    expect(contents.find((c) => c.relPath === "Empty.md")?.frontmatter.tags).toEqual([]);
+    expect(contents.find((c) => c.relPath === "Null.md")?.frontmatter.tags).toBe(null);
+  });
+
   it("builds the slugMap mapping slugs to their relPaths", async () => {
     writeFile(dir, "Alpha.md", "# Alpha");
     writeFile(dir, "Sub/Beta.md", "# Beta");
@@ -83,6 +112,25 @@ describe("loadContent", () => {
       "images/Alpha.png",
       "images/zebra.png",
     ]);
+  });
+
+  it("builds an aliasMap of alias slugs to relPaths alongside slugMap", async () => {
+    writeFile(dir, "Deep/Note.md", "---\naliases:\n  - Deep Note\n  - Another Name\n---\n\n# Note");
+    writeFile(dir, "Other.md", "---\naliases: The Other One\n---\n\n# Other");
+
+    const { aliasMap } = await loadContent(dir);
+
+    expect(aliasMap["deep-note"]).toEqual(["Deep/Note.md"]);
+    expect(aliasMap["another-name"]).toEqual(["Deep/Note.md"]);
+    expect(aliasMap["the-other-one"]).toEqual(["Other.md"]);
+    expect(aliasMap["missing"]).toBeUndefined();
+  });
+
+  it("leaves aliasMap empty when no page declares aliases", async () => {
+    writeFile(dir, "Home.md", "# Home");
+
+    const { aliasMap } = await loadContent(dir);
+    expect(aliasMap).toEqual({});
   });
 
   it("orders slugMap candidates by relPath for deterministic duplicate resolution", async () => {

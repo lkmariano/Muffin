@@ -1,3 +1,9 @@
+---
+tags:
+  - #guide
+  - #theming
+---
+
 # Styling Your Pages
 
 Muffin splits presentation into two layers you own entirely: **the theme** (the

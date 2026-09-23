@@ -80,4 +80,18 @@ describe("build entrypoint", () => {
 
     logged.mockRestore();
   });
+
+  it("assembles deterministically — two runs produce byte-identical pages", async () => {
+    const logged = vi.spyOn(console, "log").mockImplementation(() => {});
+    const { assemblePages } = await import("../../build.js");
+
+    const first = await assemblePages();
+    const second = await assemblePages();
+
+    expect(second.pages).toEqual(first.pages);
+    expect(second.contents).toEqual(first.contents);
+    expect(second.assets).toEqual(first.assets);
+
+    logged.mockRestore();
+  });
 });

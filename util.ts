@@ -39,3 +39,10 @@ export function formatRfc822(iso: string): string {
 export function toHtmlPath(relPath: string): string {
   return relPath.replace(/\\/g, "/").replace(/\.md$/, ".html");
 }
+
+/** Locale-independent byte-order compare so sort output is reproducible on any
+ *  filesystem/locale — used by content discovery, explorer building, and any
+ *  other ordering-sensitive pipeline stage. */
+export function compareByteOrder(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}

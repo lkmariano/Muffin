@@ -1,3 +1,9 @@
+---
+tags:
+  - #guide
+  - #build
+---
+
 # Usage
 
 Muffin turns the Markdown files in `content/` into a static website inside

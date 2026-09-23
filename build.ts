@@ -55,7 +55,7 @@ export interface AssembleResult {
 }
 
 export async function assemblePages(): Promise<AssembleResult> {
-  const { contents, assets, slugMap } = await loadContent(CONTENT_DIR, EXCLUDE_GLOBS);
+  const { contents, assets, slugMap, aliasMap } = await loadContent(CONTENT_DIR, EXCLUDE_GLOBS);
   const pages: Page[] = [];
 
   const assetPaths = assets.map((asset) => asset.relPath);
@@ -68,6 +68,7 @@ export async function assemblePages(): Promise<AssembleResult> {
       slugMap,
       content.relPath,
       assetPaths,
+      aliasMap,
     );
     if (containsMath(trees[content.path]!)) {
       hasMath = true;

@@ -1,3 +1,9 @@
+---
+tags:
+  - #intro
+  - #overview
+---
+
 # Welcome
 
 This is Muffin's default sample vault. It exists to show what a freshly

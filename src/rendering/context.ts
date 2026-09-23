@@ -24,6 +24,21 @@ export type PresentationOptions = {
   rssHref?: string;
 };
 
+/**
+ * The per-page presentation extension point.
+ *
+ * Muffin's composition root (`build.ts`) calls one of these per page with the
+ * assembled presentation context and the loaded page template. `renderPage` is
+ * the default implementation; a consuming site may inject its own renderer to
+ * choose presentation for a page — e.g. from
+ * `context.page.metadata.frontmatter.type` — without Muffin interpreting those
+ * values. Renderers must not import `fs` or perform filesystem operations.
+ */
+export type PageRenderer = (
+  context: PresentationContext,
+  template: string,
+) => string;
+
 export function createPresentationContext(
   page: Page,
   site: SiteIdentity,

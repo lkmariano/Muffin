@@ -4,6 +4,7 @@ import { formatDate, getSlug } from "./util.js";
 import { resolveSiteUrl, withBasePath } from "./basePath.js";
 import { buildExplorerTree } from "./src/graph/navigation.js";
 import { renderExplorer } from "./src/rendering/explorer.js";
+import type { LoadedAsset, LoadedContent } from "./src/content/loader.js";
 import { loadContent } from "./src/content/loader.js";
 import { normalizeTags, resolvePageTitle } from "./src/content/frontmatter.js";
 import { containsMath, parseMarkdown, renderMarkdownTree } from "./src/content/markdown.js";
@@ -19,8 +20,9 @@ import {
 } from "./src/output/assets.js";
 import { renderRssFeed, renderSitemap } from "./src/output/syndication.js";
 import { loadPageTemplate } from "./src/output/templates.js";
-import { renderPage } from "./src/rendering/page.js";
+import { renderSitePage } from "./src/presentation/renderSitePage.js";
 import { createPresentationContext } from "./src/rendering/context.js";
+import type { PageRenderer } from "./src/rendering/context.js";
 import {
   CONTENT_DIRECTORY,
   EXCLUDE_GLOBS,
@@ -31,9 +33,30 @@ import {
 import type { Page } from "./src/domain/page.js";
 import type { Root } from "mdast";
 
-async function parseFiles(contentDir: string, exclude: string[]) {
-  const { contents, assets, slugMap } = await loadContent(contentDir, exclude);
-  const parsedData: Page[] = [];
+const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
+const CONTENT_DIR = path.resolve(PROJECT_ROOT, CONTENT_DIRECTORY);
+const OUTPUT_DIR = path.resolve(PROJECT_ROOT, OUTPUT_DIRECTORY);
+
+/**
+ * The reusable Content → Page boundary.
+ *
+ * Performs discovery, parsing, graph construction, TOC extraction, backlink
+ * resolution, and markdown rendering, returning fully assembled `Page` objects
+ * (metadata, content HTML, TOC, backlinks, paths, title) plus the loaded
+ * contents/assets and the site-wide math flag for downstream writing. It never
+ * writes to disk. Consumers get the assembled model, not AST/pipeline state;
+ * path selection comes from the compile-time constants in `src/site.ts`.
+ */
+export interface AssembleResult {
+  pages: Page[];
+  contents: LoadedContent[];
+  assets: LoadedAsset[];
+  hasMath: boolean;
+}
+
+export async function assemblePages(): Promise<AssembleResult> {
+  const { contents, assets, slugMap } = await loadContent(CONTENT_DIR, EXCLUDE_GLOBS);
+  const pages: Page[] = [];
 
   const assetPaths = assets.map((asset) => asset.relPath);
 
@@ -66,7 +89,7 @@ async function parseFiles(contentDir: string, exclude: string[]) {
     const statusValue = content.frontmatter.status;
     const tree = trees[content.path]!;
 
-    parsedData.push({
+    pages.push({
       path: content.path,
       relPath: content.relPath,
       slug,
@@ -84,33 +107,37 @@ async function parseFiles(contentDir: string, exclude: string[]) {
     });
   }
 
-  return { parsedData, contents, assets, hasMath };
+  return { pages, contents, assets, hasMath };
 }
 
-const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
-const CONTENT_DIR = path.resolve(PROJECT_ROOT, CONTENT_DIRECTORY);
-const OUTPUT_DIR = path.resolve(PROJECT_ROOT, OUTPUT_DIRECTORY);
+export interface BuildOptions {
+  /** Per-page renderer; defaults to Muffin's shipped `renderSitePage`. */
+  renderer?: PageRenderer;
+}
 
-async function main(): Promise<void> {
+/**
+ * Muffin's high-level build command: assembles pages, then renders each page
+ * through the supplied renderer (default `renderSitePage`) and writes pages,
+ * static assets, syndication, vault assets, and the public/ passthrough.
+ */
+export async function build(options: BuildOptions = {}): Promise<void> {
   console.log("Parsing markdown files...");
   const origin = resolveSiteUrl(SITE.url ?? "");
   try {
-    const { parsedData, contents, assets, hasMath } = await parseFiles(
-      CONTENT_DIR,
-      EXCLUDE_GLOBS,
-    );
+    const { pages, contents, assets, hasMath } = await assemblePages();
 
-    if (parsedData.length === 0) {
+    if (pages.length === 0) {
       console.log("No pages found to render.");
     } else {
       const explorerTree = buildExplorerTree(contents);
       const template = loadPageTemplate();
       const rssHref = origin === "" ? "" : origin + withBasePath("/feed.xml");
-      const outputPages = parsedData.map((page) => {
+      const renderer = options.renderer ?? renderSitePage;
+      const outputPages = pages.map((page) => {
         const explorerHtml = renderExplorer(explorerTree, page.relPath);
         return {
           path: page.path,
-          renderedHtml: renderPage(
+          renderedHtml: renderer(
             createPresentationContext(page, SITE, explorerHtml, { hasMath, rssHref }),
             template,
           ),
@@ -124,8 +151,8 @@ async function main(): Promise<void> {
       writeStaticAssets({ outputRoot: OUTPUT_DIR, hasMath });
       writeSyndication({
         outputRoot: OUTPUT_DIR,
-        feedXml: renderRssFeed(parsedData, origin),
-        sitemapXml: renderSitemap(parsedData, origin),
+        feedXml: renderRssFeed(pages, origin),
+        sitemapXml: renderSitemap(pages, origin),
       });
     }
     copyAssets(assets, { outputRoot: OUTPUT_DIR });
@@ -136,4 +163,14 @@ async function main(): Promise<void> {
   }
 }
 
-main();
+async function main(): Promise<void> {
+  await build();
+}
+
+const isMainModule =
+  process.argv[1] !== undefined &&
+  path.resolve(fileURLToPath(import.meta.url)) === path.resolve(process.argv[1]);
+
+if (isMainModule) {
+  main();
+}

@@ -16,7 +16,10 @@ import { renderRssFeed, renderSitemap } from "../../src/output/syndication.js";
 import { writePages } from "../../src/output/writer.js";
 import { loadPageTemplate } from "../../src/output/templates.js";
 import { renderPage } from "../../src/rendering/page.js";
-import { createPresentationContext } from "../../src/rendering/context.js";
+import {
+  createPresentationContext,
+  type PageRenderer,
+} from "../../src/rendering/context.js";
 import type { SiteIdentity } from "../../src/site.js";
 import type { Page, PageMetadata } from "../../src/domain/page.js";
 import type { Root } from "mdast";
@@ -50,6 +53,7 @@ const site: SiteIdentity = { title: "Muffin", lang: "en" };
 interface ParseVaultOptions {
   exclude?: string[];
   vaultDir?: string;
+  renderer?: PageRenderer;
 }
 
 async function parseVault(files: Record<string, string>, options: ParseVaultOptions = {}) {
@@ -85,6 +89,7 @@ async function renderVault(files: Record<string, string>, options: ParseVaultOpt
   const pageModels: Page[] = [];
   const origin = resolveSiteUrl("");
   const rssHref = origin === "" ? "" : origin + withBasePath("/feed.xml");
+  const renderer = options.renderer ?? renderPage;
   for (const content of contents) {
     const parsedContent = parsed.find((p) => p.path === content.path);
     if (!parsedContent) continue;
@@ -110,7 +115,7 @@ async function renderVault(files: Record<string, string>, options: ParseVaultOpt
     pageModels.push(renderedPage);
     pages.push({
       path: content.path,
-      renderedHtml: renderPage(
+      renderedHtml: renderer(
         createPresentationContext(renderedPage, site, "", { hasMath, rssHref }),
         loadPageTemplate(),
       ),
@@ -534,5 +539,60 @@ describe("syndication through the pipeline", () => {
     expect(fs.existsSync(path.join(outputRoot, "feed.xml"))).toBe(false);
     expect(fs.existsSync(path.join(outputRoot, "sitemap.xml"))).toBe(false);
     expect(html).not.toContain("application/rss+xml");
+  });
+});
+
+describe("injectable renderer at the composition root", () => {
+  it("renders each page through a renderer that interprets frontmatter.type at the site layer", async () => {
+    const seen: Array<{ relPath: string; type: unknown }> = [];
+    const renderSitePage: PageRenderer = (context, template) => {
+      const type = context.page.metadata.frontmatter.type;
+      seen.push({ relPath: context.page.relPath, type });
+      if (type === "writings") {
+        return `<main data-layout="writings">${context.page.content}</main>`;
+      }
+      if (type === "project") {
+        return `<main data-layout="project">${context.page.title}</main>`;
+      }
+      return renderPage(context, template);
+    };
+
+    const { outputRoot } = await renderVault(
+      {
+        "Post.md": "---\ntype: writings\n---\n\n# My Post\n\nbody",
+        "App.md": "---\ntype: project\n---\n\n# My App\n\nnotes",
+        "Plain.md": "# Plain Page",
+      },
+      { renderer: renderSitePage },
+    );
+
+    expect(seen).toEqual(
+      expect.arrayContaining([
+        { relPath: "Post.md", type: "writings" },
+        { relPath: "App.md", type: "project" },
+        { relPath: "Plain.md", type: undefined },
+      ]),
+    );
+
+    const post = fs.readFileSync(path.join(outputRoot, toHtmlPath("Post.md")), "utf-8");
+    expect(post).toBe(
+      '<main data-layout="writings"><h1 id="my-post">My Post</h1>\n<p>body</p></main>',
+    );
+
+    const app = fs.readFileSync(path.join(outputRoot, toHtmlPath("App.md")), "utf-8");
+    expect(app).toBe('<main data-layout="project">App</main>');
+
+    const plain = fs.readFileSync(path.join(outputRoot, "Plain.html"), "utf-8");
+    expect(plain).toContain('<body data-slug="plain"');
+    expect(plain).not.toContain("data-layout");
+    expect(plain).not.toContain("{{");
+  });
+
+  it("keeps the default renderPage output when no renderer is supplied", async () => {
+    const { outputRoot, html } = await renderVault({ "Home.md": "# Home" });
+    const home = fs.readFileSync(path.join(outputRoot, "Home.html"), "utf-8");
+    expect(home).toBe(html);
+    expect(home).toContain('<body data-slug="home"');
+    expect(home).toContain('<h1 id="home">Home</h1>');
   });
 });

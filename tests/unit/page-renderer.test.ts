@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { renderPage } from "../../src/rendering/page.js";
+import { renderSitePage } from "../../src/presentation/renderSitePage.js";
 import {
   createPresentationContext,
+  type PageRenderer,
   type PresentationContext,
   type PresentationOptions,
 } from "../../src/rendering/context.js";
@@ -213,5 +215,74 @@ describe("renderPage", () => {
 
     const blankRss = renderPage(makeContext({}, site, { rssHref: "" }), template);
     expect(blankRss).toContain("<head></head>");
+  });
+});
+
+describe("PageRenderer contract", () => {
+  it("accepts renderPage as Muffin's default renderer", () => {
+    const defaultRenderer: PageRenderer = renderPage;
+    expect(defaultRenderer).toBe(renderPage);
+  });
+
+  it("defaults build's renderer to the shipped renderSitePage pass-through", () => {
+    const defaultRenderer: PageRenderer = renderSitePage;
+    expect(defaultRenderer).toBe(renderSitePage);
+  });
+
+  it("renderSitePage is behavior-neutral: byte-identical to renderPage", () => {
+    process.env.MUFFIN_BASE_PATH = "/Muffin";
+    const context = makeContext({}, site, { hasMath: true, rssHref: "https://example.com/feed.xml" });
+    try {
+      expect(renderSitePage(context, TEMPLATE)).toBe(renderPage(context, TEMPLATE));
+    } finally {
+      delete process.env.MUFFIN_BASE_PATH;
+    }
+  });
+
+  it("hands an injected renderer the full presentation context and template", () => {
+    const received: Array<{ context: PresentationContext; template: string }> = [];
+    const spy: PageRenderer = (context, template) => {
+      received.push({ context, template });
+      return renderPage(context, template);
+    };
+
+    const customTemplate = "<html lang=\"{{LANG}}\">{{TITLE}}</html>";
+    const html = spy(makeContext(), customTemplate);
+
+    expect(received).toHaveLength(1);
+    expect(received[0]?.template).toBe(customTemplate);
+    expect(received[0]?.context.page).toMatchObject({
+      relPath: "My Page.md",
+      title: "My Page",
+      content: "<p>hello</p>",
+    });
+    expect(received[0]?.context.page.metadata.frontmatter).toEqual({});
+    expect(received[0]?.context.site).toEqual(site);
+    expect(received[0]?.context.explorerHtml).toBe("<nav></nav>");
+    expect(received[0]?.context.hasMath).toBe(false);
+
+    expect(html).toBe(renderPage(makeContext(), customTemplate));
+  });
+
+  it("lets a renderer choose presentation from arbitrary frontmatter without Muffin interpreting it", () => {
+    const typeLayout: PageRenderer = (context, template) => {
+      const type = context.page.metadata.frontmatter.type;
+      if (type === "writings") {
+        return `<div data-layout="writings">${context.page.content}</div>`;
+      }
+      return renderPage(context, template);
+    };
+
+    const writings = typeLayout(
+      makeContext({
+        metadata: { ...page.metadata, frontmatter: { type: "writings", draft: true } },
+      }),
+      TEMPLATE,
+    );
+    expect(writings).toBe('<div data-layout="writings"><p>hello</p></div>');
+
+    const fallback = typeLayout(makeContext({ relPath: "Plain.md" }), TEMPLATE);
+    expect(fallback).toContain("<title>My Page</title>");
+    expect(fallback).toContain("<p>hello</p>");
   });
 });

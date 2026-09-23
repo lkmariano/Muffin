@@ -269,5 +269,7 @@ tests run the pipeline end-to-end on temp dirs via `tests/helpers.ts`
 
 `.github/workflows/deploy.yaml` builds and deploys to GitHub Pages on push to
 `main`, with `MUFFIN_BASE_PATH: /Muffin` and
-`MUFFIN_SITE_URL: https://${{ github.repository_owner }}.github.io/Muffin` set in
-CI (consumed by `withBasePath` and `resolveSiteUrl`, respectively).
+`MUFFIN_SITE_URL: https://${{ github.repository_owner }}.github.io` set in
+CI (consumed by `withBasePath` and `resolveSiteUrl`, respectively). The base
+path carries the `/Muffin` sub-path; the site URL is the bare origin, so
+feed/sitemap URLs compose as `origin + basePath + path` without duplication.

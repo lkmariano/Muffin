@@ -26,7 +26,7 @@ jobs:
       - run: npx tsx build.ts
         env:
           MUFFIN_BASE_PATH: /Muffin
-          MUFFIN_SITE_URL: https://${{ github.repository_owner }}.github.io/Muffin
+          MUFFIN_SITE_URL: https://${{ github.repository_owner }}.github.io
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./muffin

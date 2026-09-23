@@ -56,10 +56,10 @@ export const OUTPUT_DIRECTORY = "./muffin";
 `url` is the site origin used for absolute RSS/sitemap URLs (`""` keeps feeds
 disabled); `MUFFIN_SITE_URL` overrides it at build time. Change the constants to
 point at your vault and site; the GitHub Pages workflow (`deploy.yaml`) sets
-`MUFFIN_BASE_PATH: /Muffin` and
-`MUFFIN_SITE_URL: https://${{ github.repository_owner }}.github.io/Muffin` so all
-generated URLs are prefixed for a sub-path deployment and the feed runs on the
-deployed origin.
+`MUFFIN_BASE_PATH: /Muffin` (the sub-path) and
+`MUFFIN_SITE_URL: https://${{ github.repository_owner }}.github.io` (the bare
+origin) so feed/sitemap absolute URLs compose as `origin + basePath + path`
+without duplicating `/Muffin`.
 
 ## Commands
 

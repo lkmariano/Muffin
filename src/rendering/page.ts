@@ -13,7 +13,6 @@ export function renderPage(
 ): string {
   const {
     site,
-    basePath,
     explorerHtml,
     hasMath,
     page: { relPath, slug, title, metadata, content, backlinks, toc },
@@ -22,11 +21,10 @@ export function renderPage(
   const backlinksSection = renderBacklinks(backlinks ?? []);
   const tocSection = renderToc(toc);
 
-  const cssHref = withBasePath(basePath, "/styles.css");
-  const themeCssHref = withBasePath(basePath, "/theme.css");
+  const cssHref = withBasePath("/styles.css");
   const katexCss =
     hasMath
-      ? `<link rel="stylesheet" href="${withBasePath(basePath, "/katex/katex.min.css")}">`
+      ? `<link rel="stylesheet" href="${withBasePath("/katex/katex.min.css")}">`
       : "";
 
   const descriptionMeta =
@@ -34,6 +32,7 @@ export function renderPage(
       ? ""
       : `<meta name="description" content="${escapeAttr(site.description)}" />`;
 
+  const basePath = process.env.MUFFIN_BASE_PATH ?? "";
   const bodyAttrs = `data-slug="${escapeAttr(slug)}" data-relpath="${escapeAttr(relPath)}" data-base-path="${escapeAttr(basePath)}"`;
 
   return template
@@ -44,7 +43,6 @@ export function renderPage(
     .replaceAll("{{TOC}}", tocSection)
     .replaceAll("{{BACKLINKS}}", backlinksSection)
     .replaceAll("{{NAV}}", explorerHtml)
-    .replaceAll("{{THEME_CSS}}", themeCssHref)
     .replaceAll("{{CSS}}", cssHref)
     .replaceAll("{{KATEX_CSS}}", katexCss)
     .replaceAll("{{PAGE_META}}", renderPageMeta(metadata))

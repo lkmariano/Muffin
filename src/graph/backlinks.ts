@@ -48,10 +48,9 @@ export async function buildSiteGraph(
 export function resolveBacklinks(
   graph: SiteGraph,
   relPath: string,
-  basePath = "",
 ): Backlink[] {
   return (graph.backlinks[relPath] ?? []).map((sourceRelPath) => ({
     title: getTitle(sourceRelPath),
-    href: wikilinkToUrl(sourceRelPath, basePath),
+    href: wikilinkToUrl(sourceRelPath),
   }));
 }

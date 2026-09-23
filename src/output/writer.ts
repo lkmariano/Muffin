@@ -58,7 +58,7 @@ function resolveHomepage(pages: OutputPage[], homepage?: string): OutputPage | u
 
 // COMMENT: prunes generated output so it mirrors the current content set.
 // Removes any .html not expected this build, then strips now-empty directories.
-// Only touches .html; styles.css/theme.css and other files are left alone.
+// Only touches .html; styles.css and other files are left alone.
 function cleanupStaleHtml(outputRoot: string, expected: Set<string>): void {
   if (!fs.existsSync(outputRoot)) {
     return;

@@ -1,9 +1,6 @@
 {
   "name": "muffin",
   "version": "1.0.0",
-  "exports": {
-    ".": "./src/config/index.ts"
-  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest"

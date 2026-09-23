@@ -8,7 +8,7 @@
   desktop layout, and responsive rules that rearrange the same components rather
   than introducing a separate mobile design language.
 
-  Token names follow `ThemeTokens` in `src/theme/defaults.ts`
+  Token names live in the `:root` block of `templates/styles.css`
   (`colors`, `typography` including `sizes`, `spacing`, `layout`, `radius`).
   Values that were not visible in the mockup are explicitly defined here as
   Muffin v1 defaults so implementation does not depend on undocumented choices.
@@ -586,7 +586,7 @@
   ## 14. Implementation rules
 
   1. Treat this file as the frontend source of truth for Muffin v1.
-  2. Transcribe design tokens into `DEFAULT_THEME_TOKENS` one key at a time.
+  2. Transcribe design tokens into the `:root` block of `templates/styles.css` one key at a time.
   3. Do not encode the desktop mockup through absolute positioning when normal
      layout primitives can reproduce it.
   4. Keep responsive behavior in layout CSS / rendering structure rather than

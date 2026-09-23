@@ -1,5 +1,5 @@
 import type { Page } from "../domain/page.js";
-import type { SiteIdentity } from "../config/loader.js";
+import type { SiteIdentity } from "../site.js";
 
 /**
  * The presentation boundary between build/domain data and the HTML shell.
@@ -7,19 +7,17 @@ import type { SiteIdentity } from "../config/loader.js";
  * Build.ts assembles one context per page; templates only ever receive the
  * value of a context field, never raw domain data. The context is intentionally
  * generic — it carries Muffin page data, site identity, and rendering flags, and
- * contains no site-specific layout or branding.
+ * contains no site-specific layout or branding. Deployment plumbing like the
+ * base path lives in withBasePath(), not here.
  */
 export type PresentationContext = {
   site: SiteIdentity;
-  basePath: string;
   page: Page;
   explorerHtml: string;
   hasMath: boolean;
 };
 
 export type PresentationOptions = {
-  /** URL prefix for generated hrefs. Defaults to `site.basePath`. */
-  basePath?: string;
   hasMath?: boolean;
 };
 
@@ -31,7 +29,6 @@ export function createPresentationContext(
 ): PresentationContext {
   return {
     site,
-    basePath: options.basePath ?? site.basePath,
     page,
     explorerHtml,
     hasMath: options.hasMath === true,

@@ -14,15 +14,17 @@ import { copyAssets, copyPublicAssets, writeStaticAssets } from "./src/output/as
 import { loadPageTemplate } from "./src/output/templates.js";
 import { renderPage } from "./src/rendering/page.js";
 import { createPresentationContext } from "./src/rendering/context.js";
-import { loadConfig } from "./src/config/loader.js";
+import {
+  CONTENT_DIRECTORY,
+  EXCLUDE_GLOBS,
+  HOMEPAGE,
+  OUTPUT_DIRECTORY,
+  SITE,
+} from "./src/site.js";
 import type { Page } from "./src/domain/page.js";
 import type { Root } from "mdast";
 
-async function parseFiles(
-  contentDir: string,
-  exclude: string[],
-  basePath: string,
-) {
+async function parseFiles(contentDir: string, exclude: string[]) {
   const { contents, assets, slugMap } = await loadContent(contentDir, exclude);
   const parsedData: Page[] = [];
 
@@ -70,8 +72,8 @@ async function parseFiles(
       },
       // TOC extraction must run before rendering mutates the shared AST.
       toc: extractToc(tree),
-      content: await renderMarkdownTree(tree, basePath),
-      backlinks: resolveBacklinks(graph, content.relPath, basePath),
+      content: await renderMarkdownTree(tree),
+      backlinks: resolveBacklinks(graph, content.relPath),
     });
   }
 
@@ -79,18 +81,15 @@ async function parseFiles(
 }
 
 const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
-const CONFIG_PATH = path.join(PROJECT_ROOT, "muffin.config.ts");
+const CONTENT_DIR = path.resolve(PROJECT_ROOT, CONTENT_DIRECTORY);
+const OUTPUT_DIR = path.resolve(PROJECT_ROOT, OUTPUT_DIRECTORY);
 
 async function main(): Promise<void> {
-  const config = await loadConfig(CONFIG_PATH);
-  const outputRoot = config.output.directory;
-
   console.log("Parsing markdown files...");
   try {
     const { parsedData, contents, assets, hasMath } = await parseFiles(
-      config.content.directory,
-      config.content.exclude,
-      config.site.basePath,
+      CONTENT_DIR,
+      EXCLUDE_GLOBS,
     );
 
     if (parsedData.length === 0) {
@@ -99,28 +98,24 @@ async function main(): Promise<void> {
       const explorerTree = buildExplorerTree(contents);
       const template = loadPageTemplate();
       const outputPages = parsedData.map((page) => {
-        const explorerHtml = renderExplorer(
-          explorerTree,
-          config.site.basePath,
-          page.relPath,
-        );
+        const explorerHtml = renderExplorer(explorerTree, page.relPath);
         return {
           path: page.path,
           renderedHtml: renderPage(
-            createPresentationContext(page, config.site, explorerHtml, { hasMath }),
+            createPresentationContext(page, SITE, explorerHtml, { hasMath }),
             template,
           ),
         };
       });
       writePages(outputPages, {
-        ...(config.homepage === undefined ? {} : { homepage: config.homepage }),
-        contentRoot: config.content.directory,
-        outputRoot,
+        homepage: HOMEPAGE,
+        contentRoot: CONTENT_DIR,
+        outputRoot: OUTPUT_DIR,
       });
-      writeStaticAssets(config.theme, { outputRoot, hasMath });
+      writeStaticAssets({ outputRoot: OUTPUT_DIR, hasMath });
     }
-    copyAssets(assets, { outputRoot });
-    copyPublicAssets(path.join(PROJECT_ROOT, "public"), { outputRoot });
+    copyAssets(assets, { outputRoot: OUTPUT_DIR });
+    copyPublicAssets(path.join(PROJECT_ROOT, "public"), { outputRoot: OUTPUT_DIR });
   } catch (error) {
     console.error("Build failed:", error);
     process.exit(1);

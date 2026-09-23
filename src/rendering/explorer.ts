@@ -8,7 +8,6 @@ import { withBasePath } from "../../basePath.js";
  */
 export function renderExplorer(
   nodes: ExplorerNode[],
-  basePath = "",
   currentRelPath?: string,
 ): string {
   const folders = nodes.filter((node) => node.type === "folder");
@@ -17,12 +16,12 @@ export function renderExplorer(
 
   if (folders.length > 0) {
     parts.push(
-      `<ul class="explorer-folders">${folders.map((node) => renderExplorerNode(node, basePath, currentRelPath)).join("")}</ul>`,
+      `<ul class="explorer-folders">${folders.map((node) => renderExplorerNode(node, currentRelPath)).join("")}</ul>`,
     );
   }
   if (notes.length > 0) {
     parts.push(
-      `<ul class="explorer-notes">${notes.map((node) => renderExplorerNode(node, basePath, currentRelPath)).join("")}</ul>`,
+      `<ul class="explorer-notes">${notes.map((node) => renderExplorerNode(node, currentRelPath)).join("")}</ul>`,
     );
   }
 
@@ -31,11 +30,10 @@ export function renderExplorer(
 
 function renderExplorerNode(
   node: ExplorerNode,
-  basePath: string,
   currentRelPath?: string,
 ): string {
   if (node.type === "file") {
-    const href = withBasePath(basePath, `/${node.href}`);
+    const href = withBasePath(`/${node.href}`);
     const isCurrent = currentRelPath !== undefined && node.path === currentRelPath;
     const className = isCurrent ? "explorer-file explorer-current" : "explorer-file";
     const ariaCurrent = isCurrent ? ' aria-current="page"' : "";
@@ -57,7 +55,7 @@ function renderExplorerNode(
       <span class="explorer-folder-name">${escapeHtml(node.name)}</span>
     </summary>
     <ul>
-${children.map((child) => renderExplorerNode(child, basePath, currentRelPath)).join("\n")}
+${children.map((child) => renderExplorerNode(child, currentRelPath)).join("\n")}
     </ul>
   </details>
 </li>`;

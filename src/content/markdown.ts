@@ -54,10 +54,10 @@ export async function parseMarkdown(
   return parser.run(tree) as Promise<Root>;
 }
 
-export async function renderMarkdownTree(tree: Root, basePath = ""): Promise<string> {
+export async function renderMarkdownTree(tree: Root): Promise<string> {
   const renderer = unified()
-    .use(imageEmbedUrlPlugin, basePath)
-    .use(wikilinkToUrlPlugin, basePath)
+    .use(imageEmbedUrlPlugin)
+    .use(wikilinkToUrlPlugin)
     .use(remarkRehype, {
       handlers: {
         highlight: highlightHandler,
@@ -76,10 +76,9 @@ export async function renderMarkdown(
   body: string,
   slugMap: Record<string, string[]>,
   currentFile: string,
-  basePath = "",
   assetPaths: string[] = [],
 ): Promise<string> {
-  return renderMarkdownTree(await parseMarkdown(body, slugMap, currentFile, assetPaths), basePath);
+  return renderMarkdownTree(await parseMarkdown(body, slugMap, currentFile, assetPaths));
 }
 
 // Comments (%%...%%) are removed; highlights (==...==) become semantic

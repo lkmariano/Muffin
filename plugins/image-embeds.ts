@@ -16,8 +16,8 @@ export function isSupportedPdfFormat(relPath: string): boolean {
   return SUPPORTED_PDF_FORMAT.test(relPath);
 }
 
-export function assetUrl(relPath: string, basePath: string): string {
-  return withBasePath(basePath, `/${relPath.replace(/\\/g, "/")}`);
+export function assetUrl(relPath: string): string {
+  return withBasePath(`/${relPath.replace(/\\/g, "/")}`);
 }
 
 export function resolveImageEmbed(
@@ -119,7 +119,7 @@ export function imageEmbedPlugin(
   };
 }
 
-export function imageEmbedUrlPlugin(basePath: string): (tree: any) => void {
+export function imageEmbedUrlPlugin(): (tree: any) => void {
   return (tree: any): void => {
     visit(tree, "image", (node: any, index: number | undefined, parent: any) => {
       if (!node.data || !node.data.isImageEmbed) {
@@ -131,13 +131,13 @@ export function imageEmbedUrlPlugin(basePath: string): (tree: any) => void {
         }
         return;
       }
-      node.url = assetUrl(node.url, basePath);
+      node.url = assetUrl(node.url);
     });
     visit(tree, "pdf", (node: any) => {
       if (!node.data || !node.data.isPdfEmbed) {
         return;
       }
-      node.url = assetUrl(node.url, basePath);
+      node.url = assetUrl(node.url);
     });
   };
 }

@@ -1,7 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600;700&display=swap');
+
+/* Muffin v1 default design tokens. Every visual value the stylesheet consumes
+   comes from these CSS custom properties; the rest of styles.css owns only
+   role-to-component mapping and responsive arrangement. */
+
+:root {
+  --color-text: #E8EAED;
+  --color-muted: #9AA0A6;
+  --color-background: #202124;
+  --color-link: #81C995;
+  --color-border: #3C4043;
+  --color-accent: #81C995;
+  --color-code: #E8EAED;
+  --color-code-background: #292A2D;
+  --color-code-border: #3C4043;
+  --typography-body: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --typography-heading: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --typography-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --typography-base-size: 14px;
+  --typography-line-height: 1.2;
+  --typography-weight: 400;
+  --typography-heading-weight: 700;
+  --typography-size-xs: 12px;
+  --typography-size-sm: 14px;
+  --typography-size-md: 16px;
+  --typography-size-lg: 20px;
+  --typography-size-xl: 22px;
+  --typography-size-2xl: 38px;
+  --spacing-1: 2px;
+  --spacing-2: 5px;
+  --spacing-3: 10px;
+  --spacing-4: 20px;
+  --spacing-5: 25px;
+  --spacing-6: 27px;
+  --spacing-7: 50px;
+  --layout-content-width: 630px;
+  --layout-main-width: 700px;
+  --layout-nav-width: 190px;
+  --layout-aside-width: 181px;
+  --layout-sidebar-inset: 159px;
+  --layout-page-top: calc(var(--spacing-7) + var(--spacing-3));
+  --radius-sm: 0;
+  --radius-md: 0;
+}
+
 /* Muffin v1 default presentation (DESIGN.md).
-   Every visual value comes from theme tokens in theme.css (generated from
-   src/theme/css.ts + config); this stylesheet owns only role-to-component
-   mapping and responsive arrangement. */
+   Every visual value comes from the :root tokens above; this stylesheet owns
+   only role-to-component mapping and responsive arrangement. */
 
 * {
   box-sizing: border-box;

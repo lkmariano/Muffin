@@ -1,7 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { generateThemeCss } from "../theme/css.js";
-import type { ThemeTokens } from "../theme/css.js";
 import type { LoadedAsset } from "../content/loader.js";
 
 export interface WriteStaticAssetsOptions {
@@ -9,14 +7,10 @@ export interface WriteStaticAssetsOptions {
   hasMath?: boolean;
 }
 
-export function writeStaticAssets(
-  theme: ThemeTokens,
-  options: WriteStaticAssetsOptions = {},
-): void {
+export function writeStaticAssets(options: WriteStaticAssetsOptions = {}): void {
   const outputRoot = path.resolve(options.outputRoot ?? "./muffin");
   fs.mkdirSync(outputRoot, { recursive: true });
   fs.copyFileSync("./templates/styles.css", path.join(outputRoot, "styles.css"));
-  fs.writeFileSync(path.join(outputRoot, "theme.css"), generateThemeCss(theme), "utf-8");
   if (options.hasMath === true) {
     copyKatexAssets(outputRoot);
   } else {

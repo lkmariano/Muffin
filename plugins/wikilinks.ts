@@ -70,17 +70,17 @@ export function wikilinkPlugin(slugsMap: Record<string, string[]>, currentFile: 
   };
 }
 
-export function wikilinkToUrl(relPath: string, basePath: string): string {
-  return withBasePath(basePath, `/${toHtmlPath(relPath)}`);
+export function wikilinkToUrl(relPath: string): string {
+  return withBasePath(`/${toHtmlPath(relPath)}`);
 }
 
-export function wikilinkToUrlPlugin(basePath: string): (tree: any) => void {
+export function wikilinkToUrlPlugin(): (tree: any) => void {
   return (tree: any): void => {
     visit(tree, "link", (node: any) => {
       if (!node.data || !node.data.isWikilink) {
         return;
       }
-      const baseUrl = wikilinkToUrl(node.url, basePath);
+      const baseUrl = wikilinkToUrl(node.url);
       // Rendering consumes pre-resolved fragments from the target index. The
       // fallback normalizes a raw fragment only when no resolution pass ran
       // (e.g. the test-only renderMarkdown path); it never discovers targets.

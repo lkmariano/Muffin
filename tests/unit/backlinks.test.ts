@@ -93,9 +93,9 @@ describe("buildSiteGraph with duplicate filenames", () => {
     expect(graph.backlinks["archive/project.md"]).toEqual(["archive/source.md"]);
   });
 
-  it("keeps multiple backlinks distinct and preserves their order", async () => {
-    writeFile(dir, "Alpha.md", "Links [[Gamma]].");
+  it("keeps multiple backlinks distinct in deterministic relPath order", async () => {
     writeFile(dir, "Beta.md", "Links [[Gamma]].");
+    writeFile(dir, "Alpha.md", "Links [[Gamma]].");
     writeFile(dir, "Gamma.md", "# Gamma");
 
     const { parsed } = await parseContents(dir);
@@ -107,7 +107,7 @@ describe("buildSiteGraph with duplicate filenames", () => {
     expect(backlinks.map((link) => link.title)).toEqual(["Alpha", "Beta"]);
   });
 
-  it("resolves an ambiguous reference onto exactly one page, the first candidate", async () => {
+  it("resolves an ambiguous reference onto exactly one page, the first sorted candidate", async () => {
     writeFile(dir, "a/dup.md", "# Dup");
     writeFile(dir, "b/dup.md", "# Dup");
     writeFile(dir, "Top.md", "Links [[dup]].");
@@ -115,14 +115,13 @@ describe("buildSiteGraph with duplicate filenames", () => {
     const { parsed, slugMap } = await parseContents(dir);
     const graph = await buildSiteGraph(parsed);
 
-    // Candidates resolve by scan order for an ambiguous top-level reference.
+    // Candidates resolve in deterministic relPath order for an ambiguous
+    // top-level reference (independent of filesystem scan order).
     const candidates = slugMap["dup"] ?? [];
-    expect(candidates).toHaveLength(2);
-    const first = candidates[0]!;
-    const second = candidates[1]!;
-    expect(graph.forwardLinks["Top.md"]).toEqual([first]);
-    expect(graph.backlinks[first]).toEqual(["Top.md"]);
-    expect(graph.backlinks[second]).toBeUndefined();
+    expect(candidates).toEqual(["a/dup.md", "b/dup.md"]);
+    expect(graph.forwardLinks["Top.md"]).toEqual(["a/dup.md"]);
+    expect(graph.backlinks["a/dup.md"]).toEqual(["Top.md"]);
+    expect(graph.backlinks["b/dup.md"]).toBeUndefined();
   });
 
   it("leaves unresolved references out of the graph", async () => {

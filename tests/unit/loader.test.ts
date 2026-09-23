@@ -62,6 +62,37 @@ describe("loadContent", () => {
     expect(slugMap["beta"]).toBeDefined();
     expect(slugMap["beta"]?.[0]).toContain("Beta.md");
   });
+
+  it("returns markdown and assets in deterministic relPath order", async () => {
+    writeFile(dir, "images/zebra.png", "png");
+    writeFile(dir, "notes/Usage.md", "# Usage");
+    writeFile(dir, "Home.md", "# Home");
+    writeFile(dir, "notes/Deep/Note.md", "# Note");
+    writeFile(dir, "Reflections.md", "# Reflections");
+    writeFile(dir, "images/Alpha.png", "png");
+
+    const { contents, assets } = await loadContent(dir);
+
+    expect(contents.map((content) => content.relPath)).toEqual([
+      "Home.md",
+      "Reflections.md",
+      "notes/Deep/Note.md",
+      "notes/Usage.md",
+    ]);
+    expect(assets.map((asset) => asset.relPath)).toEqual([
+      "images/Alpha.png",
+      "images/zebra.png",
+    ]);
+  });
+
+  it("orders slugMap candidates by relPath for deterministic duplicate resolution", async () => {
+    writeFile(dir, "Sub/Alpha.md", "# Sub Alpha");
+    writeFile(dir, "Alpha.md", "# Root Alpha");
+
+    const { slugMap } = await loadContent(dir);
+
+    expect(slugMap["alpha"]).toEqual(["Alpha.md", "Sub/Alpha.md"]);
+  });
 });
 
 describe("loadContent assets", () => {

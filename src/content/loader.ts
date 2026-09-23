@@ -83,16 +83,34 @@ function isExcluded(exclude: string[], relPath: string): boolean {
   return mm.isMatch(normalized, exclude, { dot: true });
 }
 
+// Locale-independent byte order so output is reproducible on any filesystem.
+function comparePaths(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+function sortByRelPath(directory: string, files: string[]): string[] {
+  return files
+    .map((file) => ({ file, relPath: requireRelPath(directory, file) }))
+    .sort((a, b) => comparePaths(a.relPath, b.relPath))
+    .map((entry) => entry.file);
+}
+
 export async function loadContent(
   directory: string,
   exclude: string[] = [],
 ): Promise<LoadedContentResult> {
-  const markdownFiles = (
-    await getMarkdownFiles(directory)
-  ).filter((file) => !isExcluded(exclude, requireRelPath(directory, file)));
-  const assetFiles = (
-    await getFiles(directory, isAssetFile)
-  ).filter((file) => !isExcluded(exclude, requireRelPath(directory, file)));
+  const markdownFiles = sortByRelPath(
+    directory,
+    (await getMarkdownFiles(directory)).filter(
+      (file) => !isExcluded(exclude, requireRelPath(directory, file)),
+    ),
+  );
+  const assetFiles = sortByRelPath(
+    directory,
+    (await getFiles(directory, isAssetFile)).filter(
+      (file) => !isExcluded(exclude, requireRelPath(directory, file)),
+    ),
+  );
 
   const slugMap: Record<string, string[]> = {};
 

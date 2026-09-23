@@ -282,6 +282,17 @@ Page types should not become hardcoded application concepts such as "portfolio",
 
 Instead, Muffin should provide a generic mechanism through which a site can associate a page type with a presentation or layout.
 
+That mechanism is the `PageRenderer` contract (`(context, template) => string`),
+injected at the composition root: `build.ts` calls it once per page with the
+assembled `PresentationContext` (which carries `Page.metadata.frontmatter`
+verbatim) and the loaded template. Muffin ships a default implementation,
+`renderSitePage` (`src/presentation/renderSitePage.ts`), a transparent
+pass-through to `renderPage` that is the guided, editable place for a site to
+branch on e.g. `context.page.metadata.frontmatter.type`; consuming sites may
+also supply their own renderer entirely, falling back to `renderPage` for
+everything else. Muffin guarantees the frontmatter is preserved — it never
+interprets what those values mean.
+
 Conceptually:
 
 ```text
@@ -327,6 +338,13 @@ They should not be responsible for:
 * writing files
 
 Rendering should remain replaceable without requiring changes to the underlying content model.
+
+The renderer is supplied at the composition root: `assemblePages()` exposes the
+reusable Content → Page boundary (`AssembleResult` — assembled `Page[]`,
+contents, assets, and the site-wide math flag, never AST/pipeline state), and
+`build({ renderer })` composes assembly with rendering and output, defaulting
+to the shipped `renderSitePage` pass-through. Replacing the presentation never
+requires touching content, graph, or output layers.
 
 ---
 
@@ -541,6 +559,11 @@ Potential extension points include:
 * future plugins
 
 However, an extension API should only be introduced when real use cases justify it.
+
+Real use cases have justified exactly one formal hook so far: the `PageRenderer`
+injected at the composition root (see §9/§10), which lets a site interpret
+arbitrary frontmatter values while Muffin remains opaque to them. Everything
+else should stay concrete and direct until a concrete need appears.
 
 The existence of a `plugins/` directory or a desire for future customization is not, by itself, a reason to create a formal plugin architecture.
 

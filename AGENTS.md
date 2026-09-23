@@ -111,7 +111,7 @@ builder's renderer code still MUST NOT use DOM APIs at runtime.
 
 | Path | Purpose |
 |------|---------|
-| `build.ts` | composition root — wires discovery → parse → graph → render → output (paths from `src/site.ts` constants resolved against `PROJECT_ROOT`), assembles `Page` objects + presentation contexts, and copies `public/` |
+| `build.ts` | composition root (paths from `src/site.ts` constants resolved against `PROJECT_ROOT`) — exports `assemblePages()` (the reusable Content → Page boundary: discovery → parse → graph → `Page[]` assembly, no output writes, `AssembleResult` `{ pages, contents, assets, hasMath }` exposes assembled data, not AST/pipeline state) and `build({ renderer? })` (the high-level build command: assemble → render each page through the `PageRenderer` — default `renderSitePage` — → `writePages` + static/syndication assets + `public/` copy). Auto-runs only when executed directly (`is-main-module` guard), so `import { build, assemblePages } from "./build.ts"` is side-effect-free for external site compositions |
 | `./content/*.md` | default sample vault (nested folders supported) + image assets — replace with your own content |
 | `./templates/page.html` | HTML shell with `{{PLACEHOLDER}}` tokens + a `<head>` `js`-class script (pre-paint) and three inline client scripts (Explorer state persistence, the burger drawer, and the scroll-listener TOC scroll-spy; current-page highlighting is server-rendered, no script). Body includes the mobile top bar (`header.topbar` with `#nav-toggle`) + `#nav-backdrop`, and `<nav id="site-nav">` |
 | `./templates/styles.css` | self-contained global stylesheet — Google Fonts `@import` (first rule) + the full Muffin v1 token set in `:root` (colors, Instrument Sans typography 400/600/700, spacing 1–7, layout columns nav 190px / main 700px with one top edge `pageTop`, radius 0), CSS variable layout + state rules: `:focus-visible` ring, current-page Explorer note/folder, TOC `has-spy`/`is-passed`, one-top-edge grid (`align-items: first baseline` at `--layout-page-top`), compact 15px/2px Explorer tree with aligned root notes, 1px-stroke SVG chevrons in 25px/15px boxes, the collapsible TOC `<details>` header (with `:has()` collapse spacing), and the `<899px` burger/drawer nav (`.js`-gated) |
@@ -120,7 +120,8 @@ builder's renderer code still MUST NOT use DOM APIs at runtime.
 | `./src/content/` | sole source-vault boundary: discovery/read + frontmatter parse (`loader.ts` → `loadContent(directory, exclude)` → `LoadedContent` `{ path, relPath, frontmatter, body, mtime }` + `LoadedAsset[]` for images + PDFs + `slugMap`); frontmatter normalization + title precedence (`frontmatter.ts` → `normalizeTags`/`resolvePageTitle`); markdown parse/render (`markdown.ts` — `parseMarkdown` + `renderMarkdownTree`; `renderMarkdown` is a test-only convenience; GFM, math, highlights/comments, callouts, and heading/block anchors handled in-repo here); heading IDs + block IDs (`anchors.ts` — pure slugging/ID assignment, no fs); reference target index + fragment resolution (`targets.ts` — `buildTargetIndex`/`resolveReferenceFragments`, relPath-keyed, no fs); build-time TOC extraction (`toc.ts` — `extractToc`, depth 1–3, data only, no HTML) |
 | `./src/graph/` | backlink graph (`backlinks.ts`, relPath-keyed; `resolveBacklinks(graph, relPath)`) + explorer tree (`navigation.ts`, built from `LoadedContent.relPath` — no filesystem access) |
 | `./src/domain/` | models: `page.ts` (`Page`, `Backlink`, `TocEntry`, `PageMetadata`), `siteGraph.ts` (`SiteGraph`), `explorer.ts` (`ExplorerNode`) |
-| `./src/rendering/` | pure HTML generation — `context.ts` (`PresentationContext` + `createPresentationContext(page, site, explorerHtml, { hasMath, rssHref })`), `page.ts` (`renderPage(context, template)`; body attrs `data-slug`/`data-relpath`/`data-base-path` from the `MUFFIN_BASE_PATH` env; RSS alternate link from `rssHref`; TOC rendered as a collapsible `<details>` with an `aside-chevron` SVG, backlinks under `h2.aside-title`, mtime date displayed human-readable), `explorer.ts` (`renderExplorer(nodes, currentRelPath?)` — `data-explorer-path` on files, `data-folder-path` on folders, SVG folder chevrons, `aria-current="page"` + `explorer-current` on the matching file, `explorer-active-folder` on ancestor folders, attribute escaping; hrefs base-pathed via `withBasePath`) — no `fs` imports |
+| `./src/rendering/` | pure HTML generation — `context.ts` (`PresentationContext` + `createPresentationContext(page, site, explorerHtml, { hasMath, rssHref })` + the `PageRenderer` contract `(context, template) => string` — the per-page presentation extension point injected at the composition root; consumers may interpret arbitrary frontmatter there, Muffin stays opaque), `page.ts` (`renderPage(context, template)` — Muffin's base page-shell renderer; body attrs `data-slug`/`data-relpath`/`data-base-path` from the `MUFFIN_BASE_PATH` env; RSS alternate link from `rssHref`; TOC rendered as a collapsible `<details>` with an `aside-chevron` SVG, backlinks under `h2.aside-title`, mtime date displayed human-readable), `explorer.ts` (`renderExplorer(nodes, currentRelPath?)` — `data-explorer-path` on files, `data-folder-path` on folders, SVG folder chevrons, `aria-current="page"` + `explorer-current` on the matching file, `explorer-active-folder` on ancestor folders, attribute escaping; hrefs base-pathed via `withBasePath`) — no `fs` imports |
+| `./src/presentation/` | the shipped site presentation seam — `renderSitePage.ts` (`renderSitePage`, Muffin's default `PageRenderer`: a transparent pass-through of `renderPage` that `build()` uses by default; the doc comment is the guided place for a site to branch on `context.page.metadata.frontmatter.type` — Muffin core interprets nothing) |
 | `./src/output/` | file writing + stale-output pruning (`writer.ts`), static assets + KaTeX + vault-asset copying + public passthrough + feed/sitemap gating (`assets.ts`: `writeStaticAssets({ outputRoot, hasMath })`/`copyAssets`/`copyPublicAssets`/`writeSyndication({ outputRoot, feedXml, sitemapXml })`), RSS + sitemap generation (`syndication.ts` — `renderRssFeed`/`renderSitemap`, pure, no fs, `Page[]` + origin only; no filtering/rediscovery, arbitrary frontmatter is opaque), template loading (`templates.ts`) |
 | `./plugins/` | `wikilinks.ts` (target resolution + URL construction, incl. `[[note#Heading]]`/`[[note#^block-id]]` fragment parsing) and `image-embeds.ts` (Obsidian `![[...]]` embeds — image + PDF syntax, resolution, and base-path-aware URLs) |
 | `./tests/` | vitest unit + integration tests, shared helpers |
@@ -139,7 +140,9 @@ tests run the pipeline end-to-end on temp dirs via `tests/helpers.ts`
 - `tests/unit/` — `loader`, `markdown`, `frontmatter`, `wikilinks`, `anchors`,
   `targets`, `backlinks`, `explorer`, `writer`,
   `asset-copy`, `page-renderer`, `callouts`, `gfm`, `ofm`, `image-embeds`,
-  `pdf-embeds`, `util`, `basePath`, `toc`, plus `browser/`
+  `pdf-embeds`, `util`, `basePath`, `toc`, `build-entrypoint` (hermetic:
+  importing `build.ts` runs no pipeline and writes nothing; `assemblePages()`
+  returns fully-assembled `Page[]` over the sample vault), plus `browser/`
   (`explorer-behavior`, `toc-spy`) — jsdom-based behavior tests that load real
   rendered pages (`templates/page.html` + `renderPage`) with `runScripts:
   "dangerously"` and execute the production inline scripts; `matchMedia` and
@@ -164,10 +167,22 @@ tests run the pipeline end-to-end on temp dirs via `tests/helpers.ts`
   → buildExplorerTree (from LoadedContent.relPath, no fs)       → src/graph/navigation.ts
   → renderExplorer (nodes, page.relPath) per page → NAV html (current page + active folders marked; hrefs base-pathed) → src/rendering/explorer.ts
   → createPresentationContext (page + site identity + explorer + hasMath + rssHref) → src/rendering/context.ts
-  → renderPage (context → HTML shell, body attrs data-slug/data-relpath/data-base-path, RSS alternate link, collapsible TOC `<details>` + backlinks sections) → src/rendering/page.ts
+  → PageRenderer (context + template → HTML shell; Muffin default `renderSitePage` — a pass-through of `renderPage`; consumers inject their own at the composition root) → src/presentation/renderSitePage.ts
   → writePages + writeStaticAssets (self-contained styles.css; katex assets via copyKatexAssets) + writeSyndication (feed.xml/sitemap.xml via renderRssFeed/renderSitemap, gated on an origin) + copyAssets (vault images/PDFs) + copyPublicAssets (./public passthrough) → src/output/writer.ts + assets.ts + syndication.ts
   → ./muffin/ (mirrors folder structure)
 ```
+
+The first five stages (through renderMarkdownTree) are wrapped by `assemblePages()`
+— the reusable Content → Page boundary returning `{ pages, contents, assets,
+hasMath }`; `build({ renderer? })` composes that with rendering + output. Both
+live in `build.ts`, which auto-runs only when executed directly, so an external
+site composition can `import { build, assemblePages } from "./build.ts"`,
+interpret arbitrary `Page.metadata.frontmatter` values (e.g. `type: writings`)
+through its own `PageRenderer`, and fall back to `renderPage` for everything
+else — Muffin never interprets those values. In-repo, `build()` routes every
+page through the shipped default `renderSitePage` (`src/presentation/`) — a
+pass-through of `renderPage` with a doc comment showing where to branch on
+`frontmatter.type` for the site's own layouts.
 
 - **Single parse + rendering mutates the tree:** each body is parsed once into a
   shared mdast tree (`parseMarkdown` resolves wikilinks into `link` nodes,

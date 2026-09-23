@@ -63,28 +63,68 @@ without duplicating `/Muffin`.
 
 ## Commands
 
-- **Build:** `npx tsx build.ts`
+- **Build:** `npx tsx build.ts` (equivalent to `await build()`)
 - **Test:** `npm test`
+
+## Extending presentation for your own site
+
+`build.ts` is safely importable and exposes two seams:
+
+- `assemblePages()` — the reusable Content → Page boundary. It returns fully
+  assembled `Page[]` (metadata, rendered content, TOC, backlinks, paths, title),
+  plus contents, assets, and the site-wide math flag — never earlier pipeline
+  state, and it performs no output writes.
+- `build({ renderer? })` — the high-level build command. Pass a `PageRenderer`
+  (`(context, template) => string`) to choose per-page presentation; without
+  one it routes every page through Muffin's shipped default renderer,
+  `src/presentation/renderSitePage.ts`.
+
+Right out of the box, every page renders through that single file — a
+transparent pass-through to Muffin's stock shell (`renderPage`), whose doc
+comment is the guided place to branch on your own frontmatter. Muffin only
+preserves frontmatter verbatim in `Page.metadata.frontmatter`; it never decides
+what your values mean:
+
+```ts
+import { build, assemblePages } from "./build.ts";
+import { renderPage } from "./src/rendering/page.js";
+import type { PageRenderer } from "./src/rendering/context.js";
+
+const renderSitePage: PageRenderer = (context, template) => {
+  // "type: writings" means nothing to Muffin — your site decides:
+  if (context.page.metadata.frontmatter.type === "writings") {
+    return `<article>${context.page.content}</article>`;
+  }
+  return renderPage(context, template); // stock shell for everything else
+};
+
+const { pages } = await assemblePages(); // cross-page work, e.g. a writings index
+
+await build({ renderer: renderSitePage });
+```
 
 ## Architecture
 
 ```
 (compile-time constants in src/site.ts + MUFFIN_BASE_PATH/MUFFIN_SITE_URL env)
 content/*.md
-  → loadContent()            CONTENT_DIRECTORY + EXCLUDE_GLOBS → LoadedContent[] + assets
-  → slugMap                  slug → [candidate file paths] (supports duplicate filenames)
-  → parseMarkdown()          body → shared mdast tree (wikilinks + embeds resolved once)
-  → buildTargetIndex()       heading/block anchors from the parsed ASTs
-  → buildSiteGraph()         forward/back links from the parsed ASTs
-  → renderMarkdownTree()     same trees → HTML (GFM, KaTeX, callouts)
-  → buildExplorerTree()      from relPath, no filesystem access → explorer HTML
-  → createPresentationContext()  page + SITE + explorer → PresentationContext
-  → renderPage()             context → HTML shell (TOC/backlinks sections); slug/relpath/base-path on <body>
-  → writePages()             writes .html to OUTPUT_DIRECTORY, resolves HOMEPAGE, prunes stale output
-  → writeStaticAssets()      copies the self-contained styles.css + KaTeX assets when math present
-  → writeSyndication()       feed.xml/sitemap.xml via renderRssFeed/renderSitemap when an origin resolves
-  → copyAssets()             copies vault images/PDFs into the output
-  → copyPublicAssets()       copies ./public through verbatim (project-level passthrough)
+  → assemblePages()          the reusable Content → Page boundary:
+  →   loadContent()            CONTENT_DIRECTORY + EXCLUDE_GLOBS → LoadedContent[] + assets
+  →   slugMap                  slug → [candidate file paths] (supports duplicate filenames)
+  →   parseMarkdown()          body → shared mdast tree (wikilinks + embeds resolved once)
+  →   buildTargetIndex()       heading/block anchors from the parsed ASTs
+  →   buildSiteGraph()         forward/back links from the parsed ASTs
+  →   renderMarkdownTree()     same trees → HTML (GFM, KaTeX, callouts)
+  →   returns { pages, contents, assets, hasMath }   (assembled Page[] — no writes, no AST)
+  → build({ renderer? })     the high-level build command (default renderer: renderSitePage)
+  →   buildExplorerTree()      from relPath, no filesystem access → explorer HTML
+  →   createPresentationContext()  page + SITE + explorer → PresentationContext
+  →   PageRenderer()           context + template → HTML shell (injected at the composition root)
+  →   writePages()             writes .html to OUTPUT_DIRECTORY, resolves HOMEPAGE, prunes stale output
+  →   writeStaticAssets()      copies the self-contained styles.css + KaTeX assets when math present
+  →   writeSyndication()       feed.xml/sitemap.xml via renderRssFeed/renderSitemap when an origin resolves
+  →   copyAssets()             copies vault images/PDFs into the output
+  →   copyPublicAssets()       copies ./public through verbatim (project-level passthrough)
 ```
 
 Pipeline order matters: site constants and the `MUFFIN_BASE_PATH`/`MUFFIN_SITE_URL`
@@ -97,7 +137,7 @@ markdown AST.
 
 ## Page Shell
 
-Each page renders through `templates/page.html`. The `<body>` carries `data-slug`, `data-relpath` (the page's canonical identity, used for current-page highlighting and also read by the Explorer persistence script) and `data-base-path` (the `MUFFIN_BASE_PATH` env, scoping storage keys). The page type concept from earlier phases was removed — Muffin does not ship site-specific page types such as "portfolio" or "home". Pages render from a generic `PresentationContext` (page + `SITE` + explorer HTML), so templates never touch raw build data — the three-column layout, per-page TOC, and backlinks are defined entirely by the template, the stylesheet, and the page model.
+Each page renders through `templates/page.html`. The `<body>` carries `data-slug`, `data-relpath` (the page's canonical identity, used for current-page highlighting and also read by the Explorer persistence script) and `data-base-path` (the `MUFFIN_BASE_PATH` env, scoping storage keys). Muffin ships no site-specific page types such as "portfolio" or "home" — but per-page presentation is yours to own: an injectable `PageRenderer` at the composition root can pick a layout from arbitrary frontmatter (`type: writings`, …), falling back to `renderPage`. Pages render from a generic `PresentationContext` (page + `SITE` + explorer HTML), so templates never touch raw build data — the three-column layout, per-page TOC, and backlinks are defined entirely by the template, the stylesheet, and the page model.
 
 The template ships three tiny standalone client scripts (all gated so the page works without JS): one persists Explorer folder `details` state (keyed as `muffin:explorer:v1:{basePath}`), one opens the `≤899px` burger drawer, and one drives the TOC scroll-spy (`.has-spy`/`.is-passed`, `aria-current="location"`). Current-page highlighting needs no script — it is rendered per page at build time. All storage access is wrapped in try/catch so the page works even when storage is unavailable.
 
